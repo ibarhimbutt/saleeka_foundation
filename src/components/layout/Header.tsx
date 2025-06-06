@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { navLinks } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -48,14 +48,13 @@ const Header = () => {
       <div className="container flex h-20 items-center justify-between"> {/* Increased height for taller logo */}
         <Link href="/" className="flex items-center">
           <Image
-            src="https://placehold.co/120x60.png" // Placeholder for new logo
+            src="https://placehold.co/120x60.png" 
             alt="Saleeka Logo"
-            width={120} // Adjusted width
-            height={60} // Adjusted height
-            data-ai-hint="Saleeka logo flame"
-            className="object-contain" // Ensures logo scales nicely
+            width={120} 
+            height={60} 
+            data-ai-hint="Saleeka logo text"
+            className="object-contain" 
           />
-          {/* Removed the separate "Saleeka" text span */}
         </Link>
 
         {/* Desktop Navigation */}
@@ -73,28 +72,28 @@ const Header = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full max-w-xs bg-background p-6">
-              <div className="flex flex-col space-y-4">
-                <div className="flex justify-between items-center mb-4">
+              <SheetHeader className="text-left mb-4">
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                <div className="flex justify-between items-center">
                     <Link href="/" className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
                         <Image
-                          src="https://placehold.co/120x60.png" // Placeholder for new logo
+                          src="https://placehold.co/120x60.png" 
                           alt="Saleeka Logo"
-                          width={120} // Adjusted width
-                          height={60} // Adjusted height
-                          data-ai-hint="Saleeka logo flame"
+                          width={120} 
+                          height={60} 
+                          data-ai-hint="Saleeka logo text"
                           className="object-contain"
                         />
-                         {/* Removed the separate "Saleeka" text span */}
                     </Link>
                     <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                         <X className="h-6 w-6" />
                         <span className="sr-only">Close menu</span>
                     </Button>
                 </div>
-                <nav className="flex flex-col space-y-2">
-                    <NavItems mobile />
-                </nav>
-              </div>
+              </SheetHeader>
+              <nav className="flex flex-col space-y-2">
+                  <NavItems mobile />
+              </nav>
             </SheetContent>
           </Sheet>
         </div>
