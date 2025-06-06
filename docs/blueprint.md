@@ -1,4 +1,4 @@
-# **App Name**: Saleeka Connect
+# **App Name**: Saleeka
 
 ## Core Features:
 
