@@ -45,16 +45,17 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
+      <div className="container flex h-20 items-center justify-between"> {/* Increased height for taller logo */}
+        <Link href="/" className="flex items-center">
           <Image
-            src="https://placehold.co/32x32.png"
+            src="https://placehold.co/120x60.png" // Placeholder for new logo
             alt="Saleeka Logo"
-            width={32}
-            height={32}
-            data-ai-hint="logo flame"
+            width={120} // Adjusted width
+            height={60} // Adjusted height
+            data-ai-hint="Saleeka logo flame"
+            className="object-contain" // Ensures logo scales nicely
           />
-          <span className="font-headline text-2xl font-bold text-primary">Saleeka</span>
+          {/* Removed the separate "Saleeka" text span */}
         </Link>
 
         {/* Desktop Navigation */}
@@ -74,15 +75,16 @@ const Header = () => {
             <SheetContent side="right" className="w-full max-w-xs bg-background p-6">
               <div className="flex flex-col space-y-4">
                 <div className="flex justify-between items-center mb-4">
-                    <Link href="/" className="flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link href="/" className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
                         <Image
-                          src="https://placehold.co/32x32.png"
+                          src="https://placehold.co/120x60.png" // Placeholder for new logo
                           alt="Saleeka Logo"
-                          width={32}
-                          height={32}
-                          data-ai-hint="logo flame"
+                          width={120} // Adjusted width
+                          height={60} // Adjusted height
+                          data-ai-hint="Saleeka logo flame"
+                          className="object-contain"
                         />
-                        <span className="font-headline text-2xl font-bold text-primary">Saleeka</span>
+                         {/* Removed the separate "Saleeka" text span */}
                     </Link>
                     <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                         <X className="h-6 w-6" />
