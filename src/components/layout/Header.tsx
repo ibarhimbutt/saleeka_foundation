@@ -1,6 +1,8 @@
+
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image'; // Ensure Image is imported
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -44,9 +46,15 @@ const Header = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center">
+        <Link href="/" className="flex items-center gap-2">
+          <Image
+            src="https://placehold.co/32x32.png"
+            alt="Saleeka Logo"
+            width={32}
+            height={32}
+            data-ai-hint="logo flame"
+          />
           <span className="font-headline text-2xl font-bold text-primary">Saleeka</span>
-          <span className="font-headline text-2xl font-semibold text-accent">Connect</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -66,9 +74,15 @@ const Header = () => {
             <SheetContent side="right" className="w-full max-w-xs bg-background p-6">
               <div className="flex flex-col space-y-4">
                 <div className="flex justify-between items-center mb-4">
-                    <Link href="/" className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link href="/" className="flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Image
+                          src="https://placehold.co/32x32.png"
+                          alt="Saleeka Logo"
+                          width={32}
+                          height={32}
+                          data-ai-hint="logo flame"
+                        />
                         <span className="font-headline text-2xl font-bold text-primary">Saleeka</span>
-                        <span className="font-headline text-2xl font-semibold text-accent">Connect</span>
                     </Link>
                     <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                         <X className="h-6 w-6" />

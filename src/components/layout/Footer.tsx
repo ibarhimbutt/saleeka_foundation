@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
 
@@ -7,7 +8,7 @@ const Footer = () => {
       <div className="container py-8 text-center md:text-left">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="font-headline text-lg font-semibold mb-2 text-primary">SaleekaConnect</h3>
+            <h3 className="font-headline text-lg font-semibold mb-2 text-primary">Saleeka</h3>
             <p className="text-sm text-muted-foreground">
               Discover Your Path. Empower Your Future. The SALEEKA Way.
             </p>
