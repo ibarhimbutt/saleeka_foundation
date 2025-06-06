@@ -1,4 +1,4 @@
-import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Home, Phone } from 'lucide-react';
+import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone } from 'lucide-react';
 import type React from 'react';
 
 export type NavLink = {
@@ -8,7 +8,7 @@ export type NavLink = {
 };
 
 export const navLinks: NavLink[] = [
-  { href: '/', label: 'Home', icon: Home },
+  { href: '/', label: 'Home', icon: Users }, // Changed Home to Users as Home icon was causing issues
   { href: '/about', label: 'About Us', icon: Info },
   { href: '/programs', label: 'Programs', icon: BookOpen },
   { href: '/get-involved', label: 'Get Involved', icon: Users },
@@ -112,21 +112,21 @@ export type TeamMember = {
 export const sampleTeamMembers: TeamMember[] = [
   {
     id: '1',
-    name: 'Fatima Ahmed',
+    name: 'Najam Rashid',
     role: 'Founder & CEO',
     bio: 'Passionate about empowering youth and fostering connections for a better future.',
     imageUrl: 'https://placehold.co/300x300.png',
   },
   {
     id: '2',
-    name: 'Ali Raza',
+    name: 'Iffat Shaheen',
     role: 'Head of Programs',
     bio: 'Dedicated to creating impactful programs that bridge the gap between education and industry.',
     imageUrl: 'https://placehold.co/300x300.png',
   },
   {
     id: '3',
-    name: 'Sara Khan',
+    name: 'Taaha Najam',
     role: 'Community Manager',
     bio: 'Focused on building a vibrant and supportive community for all Saleeka members.',
     imageUrl: 'https://placehold.co/300x300.png',
