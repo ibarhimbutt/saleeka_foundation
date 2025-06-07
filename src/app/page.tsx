@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,8 @@ import SectionTitle from '@/components/shared/SectionTitle';
 
 const pillars = [
   { name: 'Students', icon: Users, color: 'text-blue-500', description: 'Connect with mentors, find projects, and access resources to kickstart your career.' },
-  { name: 'Professionals', icon: Briefcase, color: 'text-green-500', description: 'Share your expertise, mentor aspiring talents, and give back to the community.' },
-  { name: 'Organizations', icon: Building, color: 'text-purple-500', description: 'Post projects, find skilled students for internships, and collaborate on impactful initiatives.' },
+  { name: 'Professionals', icon: Building, color: 'text-green-500', description: 'Share your expertise, mentor aspiring talents, and give back to the community.' },
+  { name: 'Organizations', icon: Briefcase, color: 'text-purple-500', description: 'Post projects, find skilled students for internships, and collaborate on impactful initiatives.' },
   { name: 'Donors', icon: Heart, color: 'text-red-500', description: 'Support our mission to empower individuals and build a stronger future for all.' },
 ];
 
@@ -16,12 +17,12 @@ export default function Home() {
   return (
     <div className="space-y-16 md:space-y-24">
       {/* Hero Section */}
-      <section className="text-center py-16 md:py-24 bg-gradient-to-br from-primary/10 via-background to-background rounded-lg shadow-sm">
+      <section className="text-center py-16 md:py-24 bg-gradient-to-br from-indigo-100 via-purple-50 to-background rounded-lg shadow-sm">
         <div className="container">
           <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-bold mb-6">
             Discover Your Path. <span className="text-accent">Empower Your Future.</span>
           </h1>
-          <p className="font-headline text-2xl md:text-3xl text-primary mb-8">
+          <p className="font-headline text-2xl md:text-3xl text-primary mb-4 font-semibold">
             The SALEEKA Way.
           </p>
           <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-10">
@@ -98,7 +99,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="container text-center py-12 bg-secondary/50 rounded-lg shadow-sm">
+      <section className="container text-center py-12 bg-accent/10 rounded-lg shadow-sm">
         <h2 className="font-headline text-3xl font-bold mb-6">Ready to Get Involved?</h2>
         <p className="max-w-xl mx-auto text-muted-foreground mb-8">
           Whether you're looking to learn, mentor, collaborate, or support, there's a place for you at Saleeka.
