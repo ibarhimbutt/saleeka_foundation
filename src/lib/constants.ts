@@ -1,4 +1,5 @@
-import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone } from 'lucide-react';
+
+import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home } from 'lucide-react';
 import type React from 'react';
 
 export type NavLink = {
@@ -8,7 +9,7 @@ export type NavLink = {
 };
 
 export const navLinks: NavLink[] = [
-  { href: '/', label: 'Home', icon: Users }, // Changed Home to Users as Home icon was causing issues
+  { href: '/', label: 'Home', icon: Home },
   { href: '/about', label: 'About Us', icon: Info },
   { href: '/programs', label: 'Programs', icon: BookOpen },
   { href: '/get-involved', label: 'Get Involved', icon: Users },
@@ -58,6 +59,38 @@ export const samplePrograms: Program[] = [
     image: 'https://placehold.co/600x400.png',
     tags: ['STEM', 'Financial Aid', 'Education'],
   },
+  {
+    id: 'mentorship-arts',
+    title: 'Creative Arts Mentorship',
+    category: 'Mentorship',
+    description: 'Get paired with established artists and creative professionals. Explore your artistic talents, receive portfolio reviews, and gain insights into the creative industries. This program is for aspiring visual artists, musicians, writers, and designers.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Arts', 'Creative', 'Portfolio'],
+  },
+  {
+    id: 'project-sustainability',
+    title: 'Campus Sustainability Initiative',
+    category: 'Student Project',
+    description: 'Join a team to design and implement a sustainability project on campus or in the local community. Projects can range from waste reduction programs to renewable energy solutions. Develop leadership and project management skills while making a positive environmental impact.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Environment', 'Sustainability', 'Leadership'],
+  },
+  {
+    id: 'internship-nonprofit',
+    title: 'Non-Profit Management Internship',
+    category: 'Internship',
+    description: 'Gain hands-on experience in the non-profit sector. Assist with fundraising, program coordination, and community outreach for a mission-driven organization. Understand the operational aspects of non-profits and contribute to meaningful causes.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Non-Profit', 'Social Impact', 'Management'],
+  },
+  {
+    id: 'scholarship-leadership',
+    title: 'Emerging Leaders Scholarship',
+    category: 'Scholarship',
+    description: 'A scholarship designed for students who demonstrate exceptional leadership potential and a commitment to community service. This program aims to support and cultivate the next generation of leaders by providing financial assistance and leadership development opportunities.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Leadership', 'Community Service', 'Development']
+  }
 ];
 
 export type BlogPost = {
@@ -68,7 +101,7 @@ export type BlogPost = {
   excerpt: string;
   imageUrl: string;
   tags: string[];
-  content?: string; // Full content for single blog post page
+  content?: string; 
 };
 
 export const sampleBlogPosts: BlogPost[] = [
@@ -193,7 +226,7 @@ export const involvementTypes: InvolvementType[] = [
     title: 'For Organizations',
     description: 'Post real-world projects, find talented students for internships, and contribute to skill development.',
     ctaText: 'Post a Project',
-    icon: Users, // Could be Briefcase too, using Users for consistency
+    icon: Users, 
   },
   {
     id: 'donors',
