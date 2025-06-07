@@ -15,6 +15,7 @@ export const navLinks: NavLink[] = [
   { href: '/get-involved', label: 'Get Involved', icon: Users },
   { href: '/blog', label: 'Blog', icon: MessageSquare },
   { href: '/contact', label: 'Contact Us', icon: Phone },
+  { href: '/admin', label: 'Admin', icon: LayoutDashboard },
 ];
 
 export type Program = {
@@ -312,3 +313,4 @@ export const adminNavLinks: NavLink[] = [
   { href: '/admin/organizations', label: 'Organizations', icon: Building2 },
   { href: '/admin/donors', label: 'Donors', icon: Heart },
 ];
+
