@@ -1,8 +1,10 @@
+
 import Image from 'next/image';
 import SectionTitle from '@/components/shared/SectionTitle';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { sampleTeamMembers, samplePartners } from '@/lib/constants';
 import { CheckCircle } from 'lucide-react';
+import AiImage from '@/components/shared/AiImage';
 
 export default function AboutPage() {
   return (
@@ -16,13 +18,13 @@ export default function AboutPage() {
       <section className="container">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="rounded-lg overflow-hidden shadow-lg">
-            <Image
-              src="https://placehold.co/600x450.png"
+            <AiImage
+              prompt="a diverse group of people collaborating on a shared mission, conveying vision and teamwork"
               alt="Group of diverse people collaborating"
               width={600}
               height={450}
               className="w-full h-auto object-cover"
-              data-ai-hint="mission icons"
+              fallbackImageUrl="https://placehold.co/600x450.png"
             />
           </div>
           <div>
@@ -76,13 +78,14 @@ export default function AboutPage() {
           {sampleTeamMembers.map((member) => (
             <Card key={member.id} className="text-center overflow-hidden hover:shadow-xl transition-shadow">
               <CardHeader className="p-0">
-                <Image
-                  src={member.imageUrl}
+                <AiImage
+                  prompt={`an illustrative professional portrait of ${member.name}, ${member.role}`}
                   alt={member.name}
                   width={300}
                   height={300}
                   className="w-full h-56 object-cover"
-                  data-ai-hint="professional portrait"
+                  fallbackImageUrl={member.imageUrl}
+                  imageClassName="w-full h-56 object-cover"
                 />
               </CardHeader>
               <CardContent className="p-6">
@@ -101,13 +104,14 @@ export default function AboutPage() {
         <div className="flex flex-wrap justify-center items-center gap-8 lg:gap-12">
           {samplePartners.map((partner) => (
             <a key={partner.id} href={partner.websiteUrl} target="_blank" rel="noopener noreferrer" className="block">
-              <Image
-                src={partner.logoUrl}
+              <AiImage
+                prompt={`a modern, abstract logo for a company named ${partner.name}`}
                 alt={partner.name}
                 width={150}
                 height={80}
                 className="object-contain transition-opacity hover:opacity-75"
-                data-ai-hint="company logo"
+                fallbackImageUrl={partner.logoUrl}
+                imageClassName="object-contain transition-opacity hover:opacity-75"
               />
             </a>
           ))}

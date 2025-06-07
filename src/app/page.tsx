@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Briefcase, Heart, Building } from 'lucide-react';
 import SectionTitle from '@/components/shared/SectionTitle';
+import AiImage from '@/components/shared/AiImage';
 
 const pillars = [
   { name: 'Students', icon: Users, color: 'text-blue-500', description: 'Connect with mentors, find projects, and access resources to kickstart your career.' },
@@ -56,13 +57,14 @@ export default function Home() {
             </p>
           </div>
           <div className="rounded-lg overflow-hidden shadow-lg">
-            <Image
-              src="https://placehold.co/600x400.png"
+            <AiImage
+              prompt="a diverse group of people collaborating in a vibrant community setting, showing connection and growth"
               alt="Saleeka Foundation Community"
               width={600}
               height={400}
-              className="w-full h-auto object-cover"
-              data-ai-hint="community collaboration"
+              className="w-full h-auto"
+              imageClassName="object-cover"
+              fallbackImageUrl="https://placehold.co/600x400.png"
             />
           </div>
         </div>
@@ -87,13 +89,14 @@ export default function Home() {
           ))}
         </div>
          <div className="mt-8 rounded-lg overflow-hidden shadow-lg">
-            <Image
-              src="https://placehold.co/800x300.png"
+            <AiImage
+              prompt="an abstract network graphic showing four distinct but interconnected pillars, symbolizing a foundation's core components"
               alt="Four Pillars Connection Graphic"
               width={800}
               height={300}
-              className="w-full h-auto object-cover"
-              data-ai-hint="connection pillars network"
+              className="w-full h-auto"
+              imageClassName="object-cover"
+              fallbackImageUrl="https://placehold.co/800x300.png"
             />
           </div>
       </section>

@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { BlogPost } from '@/lib/constants';
 import { CalendarDays, UserCircle, Tag } from 'lucide-react';
+import AiImage from '@/components/shared/AiImage';
 
 type BlogPostCardProps = {
   post: BlogPost;
@@ -14,13 +16,15 @@ type BlogPostCardProps = {
 const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, isFeatured = false }) => {
   return (
     <Card className={`flex flex-col h-full overflow-hidden hover:shadow-xl transition-shadow duration-300 ${isFeatured ? 'lg:flex-row' : ''}`}>
-      <div className={`relative w-full ${isFeatured ? 'lg:w-1/2' : ''} h-56 ${isFeatured ? 'lg:h-auto' : ''}`}>
-        <Image
-          src={post.imageUrl}
+      <div className={`relative w-full ${isFeatured ? 'lg:w-1/2' : ''} h-56 ${isFeatured ? 'lg:h-auto' : 'min-h-[14rem]'}`}>
+        <AiImage
+          prompt={`an engaging image for a blog article titled "${post.title}"`}
           alt={post.title}
-          layout="fill"
-          objectFit="cover"
-          data-ai-hint="blog article"
+          width={isFeatured ? 400 : 300}
+          height={isFeatured ? 400 : 224}
+          className="w-full h-full"
+          imageClassName="object-cover"
+          fallbackImageUrl={post.imageUrl}
         />
         {isFeatured && (
            <div className="absolute top-4 left-4">

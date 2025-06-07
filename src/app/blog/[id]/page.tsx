@@ -1,3 +1,4 @@
+
 import { sampleBlogPosts, type BlogPost } from '@/lib/constants';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarDays, UserCircle, Tag } from 'lucide-react';
+import AiImage from '@/components/shared/AiImage';
 
 export async function generateStaticParams() {
   return sampleBlogPosts.map((post) => ({
@@ -50,12 +52,14 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
         <Card className="overflow-hidden shadow-lg">
           {post.imageUrl && (
             <div className="relative w-full h-64 md:h-80 rounded-t-lg overflow-hidden">
-              <Image
-                src={post.imageUrl}
+              <AiImage
+                prompt={`a header image for a blog post titled "${post.title}"`}
                 alt={post.title}
-                layout="fill"
-                objectFit="cover"
-                data-ai-hint="blog post header"
+                width={800} 
+                height={400}
+                className="w-full h-full"
+                imageClassName="object-cover"
+                fallbackImageUrl={post.imageUrl}
               />
             </div>
           )}

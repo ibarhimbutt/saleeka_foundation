@@ -1,3 +1,4 @@
+
 import { samplePrograms, type Program } from '@/lib/constants';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SummarizeButton from '@/components/shared/SummarizeButton';
+import AiImage from '@/components/shared/AiImage';
 
 export async function generateStaticParams() {
   return samplePrograms.map((program) => ({
@@ -48,12 +50,14 @@ export default function ProgramPage({ params }: ProgramPageProps) {
         <Card className="overflow-hidden shadow-lg">
           {program.image && (
             <div className="relative w-full h-64 md:h-80 rounded-t-lg overflow-hidden">
-              <Image
-                src={program.image}
+              <AiImage
+                prompt={`an illustrative image for a ${program.category} program titled "${program.title}"`}
                 alt={program.title}
-                layout="fill"
-                objectFit="cover"
-                data-ai-hint={`${program.category} details`}
+                width={800}
+                height={400}
+                className="w-full h-full"
+                imageClassName="object-cover"
+                fallbackImageUrl={program.image}
               />
             </div>
           )}

@@ -1,10 +1,12 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Program } from '@/lib/constants';
-import SummarizeButton from '@/components/shared/SummarizeButton'; // Import the SummarizeButton
+import SummarizeButton from '@/components/shared/SummarizeButton'; 
+import AiImage from '@/components/shared/AiImage';
 
 type ProgramCardProps = {
   program: Program;
@@ -15,12 +17,14 @@ const ProgramCard: React.FC<ProgramCardProps> = ({ program }) => {
     <Card className="flex flex-col h-full overflow-hidden hover:shadow-xl transition-shadow duration-300">
       {program.image && (
         <div className="relative w-full h-48">
-          <Image
-            src={program.image}
+          <AiImage
+            prompt={`an illustrative image representing a ${program.category} program, related to ${program.title}`}
             alt={program.title}
-            layout="fill"
-            objectFit="cover"
-            data-ai-hint={`${program.category} program`}
+            width={300}
+            height={192} 
+            className="w-full h-full"
+            imageClassName="object-cover"
+            fallbackImageUrl={program.image}
           />
         </div>
       )}
@@ -44,7 +48,6 @@ const ProgramCard: React.FC<ProgramCardProps> = ({ program }) => {
             </div>
           </div>
         )}
-         {/* AI Summarization Button */}
         <SummarizeButton 
           contentToSummarize={program.description} 
           buttonText="Key Takeaways"
