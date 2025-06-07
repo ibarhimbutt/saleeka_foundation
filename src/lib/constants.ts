@@ -1,5 +1,5 @@
 
-import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home } from 'lucide-react';
+import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home, LayoutDashboard, Users2, Building2 } from 'lucide-react';
 import type React from 'react';
 
 export type NavLink = {
@@ -101,7 +101,7 @@ export type BlogPost = {
   excerpt: string;
   imageUrl: string;
   tags: string[];
-  content?: string; 
+  content?: string;
 };
 
 export const sampleBlogPosts: BlogPost[] = [
@@ -226,7 +226,7 @@ export const involvementTypes: InvolvementType[] = [
     title: 'For Organizations',
     description: 'Post real-world projects, find talented students for internships, and contribute to skill development.',
     ctaText: 'Post a Project',
-    icon: Users, 
+    icon: Building2,
   },
   {
     id: 'donors',
@@ -235,4 +235,80 @@ export const involvementTypes: InvolvementType[] = [
     ctaText: 'Support Us',
     icon: Heart,
   },
+];
+
+// Admin Data Structures and Sample Data
+
+export type StudentProfile = {
+  id: string;
+  name: string;
+  email: string;
+  joinDate: string;
+  interests: string[];
+  resumeUrl?: string;
+};
+
+export const sampleStudentProfiles: StudentProfile[] = [
+  { id: 'stud1', name: 'Aisha Sharma', email: 'aisha.sharma@example.com', joinDate: '2023-01-15', interests: ['Web Development', 'AI'], resumeUrl: '#' },
+  { id: 'stud2', name: 'Ben Carter', email: 'ben.carter@example.com', joinDate: '2023-02-20', interests: ['Mobile Development', 'UX Design'] },
+  { id: 'stud3', name: 'Chen Wei', email: 'chen.wei@example.com', joinDate: '2023-03-10', interests: ['Data Science', 'Machine Learning', 'Python'], resumeUrl: '#' },
+  { id: 'stud4', name: 'Diana Prince', email: 'diana.prince@example.com', joinDate: '2023-04-05', interests: ['Cybersecurity', 'Network Admin'], resumeUrl: '#' },
+];
+
+export type ProfessionalProfile = {
+  id: string;
+  name: string;
+  email: string;
+  expertise: string[];
+  linkedinUrl?: string;
+  bio: string;
+};
+
+export const sampleProfessionalProfiles: ProfessionalProfile[] = [
+  { id: 'prof1', name: 'Dr. David Lee', email: 'david.lee@example.com', expertise: ['Software Engineering', 'Cloud Computing'], linkedinUrl: '#', bio: 'Experienced software architect with 15+ years in the industry.' },
+  { id: 'prof2', name: 'Maria Rodriguez', email: 'maria.rodriguez@example.com', expertise: ['Marketing Strategy', 'Brand Management'], bio: 'Dynamic marketing leader passionate about building brands.' },
+  { id: 'prof3', name: 'Samuel Green', email: 'samuel.green@example.com', expertise: ['Product Management', 'Agile Methodologies'], linkedinUrl: '#', bio: 'Product visionary with a track record of successful launches.' },
+  { id: 'prof4', name: 'Dr. Evelyn Reed', email: 'evelyn.reed@example.com', expertise: ['Biotechnology', 'Research'], bio: 'Leading researcher in genetic engineering.' },
+];
+
+export type OrganizationProfile = {
+  id:string;
+  name: string;
+  contactEmail: string;
+  website: string;
+  industry: string;
+  projectAreas: string[];
+  status: 'Active' | 'Pending' | 'Inactive';
+};
+
+export const sampleOrganizationProfiles: OrganizationProfile[] = [
+  { id: 'org1', name: 'Innovatech Solutions Ltd.', contactEmail: 'contact@innovatech.com', website: 'https://innovatech.com', industry: 'Technology', projectAreas: ['AI Development', 'SaaS Platforms'], status: 'Active' },
+  { id: 'org2', name: 'GreenFuture Non-Profit', contactEmail: 'info@greenfuture.org', website: 'https://greenfuture.org', industry: 'Environmental', projectAreas: ['Sustainability Projects', 'Community Workshops'], status: 'Active' },
+  { id: 'org3', name: 'HealthWell Corp', contactEmail: 'partner@healthwell.com', website: 'https://healthwell.com', industry: 'Healthcare', projectAreas: ['Medical Research', 'App Development'], status: 'Pending' },
+  { id: 'org4', name: 'EduGrowth Foundation', contactEmail: 'connect@edugrowth.org', website: 'https://edugrowth.org', industry: 'Education', projectAreas: ['Curriculum Development', 'EdTech'], status: 'Active'},
+];
+
+export type DonorProfile = {
+  id: string;
+  name: string;
+  email?: string;
+  donationDate: string;
+  amount: number;
+  type: 'Individual' | 'Corporate';
+  status: 'Processed' | 'Pending';
+};
+
+export const sampleDonorProfiles: DonorProfile[] = [
+  { id: 'donor1', name: 'Alice Wonderland', email: 'alice.w@example.com', donationDate: '2023-04-01', amount: 500, type: 'Individual', status: 'Processed' },
+  { id: 'donor2', name: 'TechCorp Inc.', email: 'giving@techcorp.com', donationDate: '2023-05-15', amount: 10000, type: 'Corporate', status: 'Processed' },
+  { id: 'donor3', name: 'Anonymous Giver', donationDate: '2023-06-01', amount: 100, type: 'Individual', status: 'Pending' },
+  { id: 'donor4', name: 'Bob Johnson', email: 'bob.j@example.com', donationDate: '2023-07-20', amount: 250, type: 'Individual', status: 'Processed' },
+];
+
+export const adminNavLinks: NavLink[] = [
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/students', label: 'Students', icon: Users2 },
+  { href: '/admin/professionals', label: 'Professionals', icon: Briefcase },
+  { href: '/admin/organizations', label: 'Organizations', icon: Building2 },
+  { href: '/admin/donors', label: 'Donors', icon: Heart },
 ];
