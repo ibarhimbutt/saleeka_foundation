@@ -1,20 +1,26 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
+import {openAI} from 'genkitx-openai'; // Import OpenAI plugin
 
-// Read the API key from environment variables
-// process.env.YOUR_API_KEY_NAME (e.g., process.env.GEMINI_API_KEY)
-// The .env file should be automatically loaded by Next.js or by the `dotenv` config in dev.ts
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+const googleApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+const openaiApiKey = process.env.OPENAI_API_KEY;
 
-// It's a good practice to ensure the API key is present,
-// but Genkit will also throw an error if it's missing and required.
-// if (!apiKey) {
-//   console.warn("API key for Google AI is not set. Please set GEMINI_API_KEY or GOOGLE_API_KEY in your .env file.");
-// }
+const plugins = [];
+
+if (googleApiKey) {
+  plugins.push(googleAI({apiKey: googleApiKey}));
+} else {
+  console.warn("Google AI API key is not set. Google AI features will be unavailable.");
+}
+
+if (openaiApiKey) {
+  plugins.push(openAI({apiKey: openaiApiKey}));
+} else {
+  console.warn("OpenAI API key is not set. OpenAI features (like DALL-E fallback) will be unavailable.");
+}
 
 export const ai = genkit({
-  plugins: [
-    googleAI({apiKey: apiKey}) // Pass the apiKey here
-  ],
-  model: 'googleai/gemini-2.0-flash',
+  plugins: plugins,
+  model: 'googleai/gemini-2.0-flash', // Default text model
 });
+
