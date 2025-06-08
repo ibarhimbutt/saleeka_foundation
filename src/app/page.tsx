@@ -57,14 +57,14 @@ export default function Home() {
             </p>
           </div>
           <div className="rounded-lg overflow-hidden shadow-lg">
-            <AiImage
-              prompt="a diverse group of people collaborating in a vibrant community setting, showing connection and growth"
+            {/* Using static image here to reduce AI generation calls */}
+            <Image
+              src="https://placehold.co/600x400.png"
               alt="Saleeka Foundation Community"
               width={600}
               height={400}
-              className="w-full h-auto"
-              imageClassName="object-cover"
-              fallbackImageUrl="https://placehold.co/600x400.png"
+              className="w-full h-auto object-cover"
+              data-ai-hint="diverse group collaboration community growth"
             />
           </div>
         </div>
@@ -89,6 +89,7 @@ export default function Home() {
           ))}
         </div>
          <div className="mt-8 rounded-lg overflow-hidden shadow-lg">
+            {/* Using AiImage for this one, but you could change it if needed */}
             <AiImage
               prompt="an abstract network graphic showing four distinct but interconnected pillars, symbolizing a foundation's core components"
               alt="Four Pillars Connection Graphic"
