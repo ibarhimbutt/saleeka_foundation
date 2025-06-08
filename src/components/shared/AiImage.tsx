@@ -34,7 +34,22 @@ const AiImage: React.FC<AiImageProps> = ({
 
   useEffect(() => {
     let isMounted = true;
+    const cacheKey = `ai-image-cache-${prompt}`;
+
     const generate = async () => {
+      // Check cache first
+      try {
+        const cachedImage = localStorage.getItem(cacheKey);
+        if (cachedImage && isMounted) {
+          setImageUrl(cachedImage);
+          setIsLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.warn("Failed to read from localStorage:", e);
+        // Proceed to generate if cache read fails
+      }
+
       setIsLoading(true);
       setError(null);
       try {
@@ -42,6 +57,12 @@ const AiImage: React.FC<AiImageProps> = ({
         const result = await generateIllustration(input);
         if (isMounted) {
           setImageUrl(result.imageDataUri);
+          try {
+            localStorage.setItem(cacheKey, result.imageDataUri);
+          } catch (e) {
+            console.warn("Failed to write to localStorage:", e);
+            // Image is still displayed, just not cached
+          }
         }
       } catch (e) {
         console.error("Error generating image:", e);
@@ -58,7 +79,6 @@ const AiImage: React.FC<AiImageProps> = ({
     if (prompt) {
       generate();
     } else {
-      // No prompt, use fallback or show error/skeleton immediately
       setIsLoading(false);
       if (!fallbackImageUrl) {
           setError("No prompt provided for image generation.");
@@ -68,7 +88,7 @@ const AiImage: React.FC<AiImageProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [prompt]);
+  }, [prompt]); // Re-run effect if prompt changes
 
   if (isLoading) {
     return (
@@ -120,7 +140,7 @@ const AiImage: React.FC<AiImageProps> = ({
     );
   }
 
-  // Fallback if no image URL and no error (e.g. empty prompt)
+  // Fallback if no image URL and no error (e.g. empty prompt or initial state before cache/generation)
   if (fallbackImageUrl) {
     return (
         <Image
@@ -134,6 +154,7 @@ const AiImage: React.FC<AiImageProps> = ({
     );
   }
 
+  // Final fallback to skeleton if all else fails (e.g., no prompt, no fallback)
   return (
     <Skeleton 
       className={cn("bg-muted/30", className)} 
