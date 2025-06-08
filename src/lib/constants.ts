@@ -1,5 +1,5 @@
 
-import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home, LayoutDashboard, Users2, Building2 } from 'lucide-react';
+import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home, LayoutDashboard, Users2, Building2, ImageUp } from 'lucide-react';
 import type React from 'react';
 
 export type NavLink = {
@@ -91,6 +91,38 @@ export const samplePrograms: Program[] = [
     description: 'A scholarship designed for students who demonstrate exceptional leadership potential and a commitment to community service. This program aims to support and cultivate the next generation of leaders by providing financial assistance and leadership development opportunities.',
     image: 'https://placehold.co/600x400.png',
     tags: ['Leadership', 'Community Service', 'Development']
+  },
+  {
+    id: 'project-health-tech',
+    title: 'AI in Healthcare Project',
+    category: 'Student Project',
+    description: 'Explore applications of AI in healthcare by working on a project that could involve diagnostic tools, patient data analysis, or a health monitoring system. Collaborate with healthcare professionals and AI experts. This project offers a unique chance to contribute to the cutting-edge field of health technology.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['AI', 'Healthcare', 'Innovation', 'Tech']
+  },
+  {
+    id: 'mentorship-entrepreneurship',
+    title: 'Startup Launchpad Mentorship',
+    category: 'Mentorship',
+    description: 'For aspiring entrepreneurs. Get guidance from successful startup founders and venture capitalists on everything from idea validation to pitching your business. This program includes workshops on business modeling, market research, and funding strategies.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Entrepreneurship', 'Startup', 'Business', 'Innovation']
+  },
+  {
+    id: 'internship-data-science',
+    title: 'Data Science & Analytics Internship',
+    category: 'Internship',
+    description: 'Work on real-world data sets to extract insights, build predictive models, and contribute to data-driven decision-making. Interns will gain experience with tools like Python, R, SQL, and various machine learning libraries. This is an opportunity to dive deep into the world of big data and analytics.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Data Science', 'Analytics', 'Machine Learning', 'Big Data']
+  },
+  {
+    id: 'scholarship-humanities',
+    title: 'Arts & Humanities Impact Scholarship',
+    category: 'Scholarship',
+    description: 'A scholarship supporting students in the arts and humanities who are passionate about using their studies to create social impact. This could be through creative writing, historical research with community relevance, or socially engaged art projects. We believe in the power of humanities to shape a better world.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Humanities', 'Arts', 'Social Impact', 'Research']
   }
 ];
 
@@ -312,5 +344,7 @@ export const adminNavLinks: NavLink[] = [
   { href: '/admin/professionals', label: 'Professionals', icon: Briefcase },
   { href: '/admin/organizations', label: 'Organizations', icon: Building2 },
   { href: '/admin/donors', label: 'Donors', icon: Heart },
+  { href: '/admin/image-regeneration', label: 'Image Regeneration', icon: ImageUp },
 ];
+
 
