@@ -28,46 +28,51 @@ const AiImage: React.FC<AiImageProps> = ({
   fallbackImageUrl,
   imageClassName,
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrlToDisplay, setImageUrlToDisplay] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    const cacheKey = `ai-image-cache-${prompt}`;
+    const cacheKey = `ai-image-url-cache-${prompt}`; // Cache the final image URL
 
-    const generate = async () => {
-      // Check cache first
+    const generateOrFetchUrl = async () => {
+      // Check localStorage for a cached URL first
       try {
-        const cachedImage = localStorage.getItem(cacheKey);
-        if (cachedImage && isMounted) {
-          setImageUrl(cachedImage);
+        const cachedUrl = localStorage.getItem(cacheKey);
+        if (cachedUrl && isMounted) {
+          setImageUrlToDisplay(cachedUrl);
           setIsLoading(false);
           return;
         }
       } catch (e) {
-        console.warn("Failed to read from localStorage:", e);
-        // Proceed to generate if cache read fails
+        console.warn("Failed to read image URL from localStorage:", e);
       }
 
       setIsLoading(true);
       setError(null);
       try {
         const input: GenerateIllustrationInput = { prompt: `Generate an illustration of ${prompt}` };
+        // This flow is now expected to return a public URL from server-side cache/storage,
+        // or generate, store, and then return the public URL.
         const result = await generateIllustration(input);
+        
         if (isMounted) {
-          setImageUrl(result.imageDataUri);
-          try {
-            localStorage.setItem(cacheKey, result.imageDataUri);
-          } catch (e) {
-            console.warn("Failed to write to localStorage:", e);
-            // Image is still displayed, just not cached
+          if (result.imageUrl) {
+            setImageUrlToDisplay(result.imageUrl);
+            try {
+              localStorage.setItem(cacheKey, result.imageUrl); // Cache the fetched/generated URL
+            } catch (e) {
+              console.warn("Failed to write image URL to localStorage:", e);
+            }
+          } else {
+            throw new Error('Image generation flow returned no URL.');
           }
         }
       } catch (e) {
-        console.error("Error generating image:", e);
+        console.error("Error generating/fetching image URL:", e);
         if (isMounted) {
-          setError("Failed to generate image.");
+          setError("Failed to load image.");
         }
       } finally {
         if (isMounted) {
@@ -77,7 +82,7 @@ const AiImage: React.FC<AiImageProps> = ({
     };
 
     if (prompt) {
-      generate();
+      generateOrFetchUrl();
     } else {
       setIsLoading(false);
       if (!fallbackImageUrl) {
@@ -88,7 +93,7 @@ const AiImage: React.FC<AiImageProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [prompt]); // Re-run effect if prompt changes
+  }, [prompt]);
 
   if (isLoading) {
     return (
@@ -99,20 +104,10 @@ const AiImage: React.FC<AiImageProps> = ({
     );
   }
 
-  if (error) {
-    if (fallbackImageUrl) {
-      return (
-        <Image
-          src={fallbackImageUrl}
-          alt={alt}
-          width={width}
-          height={height}
-          className={cn(className, imageClassName)}
-          data-ai-generated="error-fallback"
-        />
-      );
-    }
-    return (
+  const finalSrc = error ? fallbackImageUrl : imageUrlToDisplay;
+
+  if (!finalSrc) {
+     return (
       <div 
         className={cn(
           "flex flex-col items-center justify-center bg-destructive/10 text-destructive border border-destructive rounded-md",
@@ -122,43 +117,20 @@ const AiImage: React.FC<AiImageProps> = ({
         role="alert"
       >
         <AlertCircle className="w-8 h-8 mb-2" />
-        <p className="text-xs text-center px-2">{alt}: Error</p>
+        <p className="text-xs text-center px-2">{alt}: {error || "Image unavailable"}</p>
       </div>
     );
   }
 
-  if (imageUrl) {
-    return (
-      <Image
-        src={imageUrl}
-        alt={alt}
-        width={width}
-        height={height}
-        className={cn(className, imageClassName)}
-        data-ai-generated="success"
-      />
-    );
-  }
-
-  // Fallback if no image URL and no error (e.g. empty prompt or initial state before cache/generation)
-  if (fallbackImageUrl) {
-    return (
-        <Image
-            src={fallbackImageUrl}
-            alt={alt}
-            width={width}
-            height={height}
-            className={cn(className, imageClassName)}
-            data-ai-generated="prompt-fallback"
-        />
-    );
-  }
-
-  // Final fallback to skeleton if all else fails (e.g., no prompt, no fallback)
   return (
-    <Skeleton 
-      className={cn("bg-muted/30", className)} 
-      style={{ width: `${width}px`, height: `${height}px` }}
+    <Image
+      src={finalSrc}
+      alt={alt}
+      width={width}
+      height={height}
+      className={cn(className, imageClassName)}
+      data-ai-source={error ? "error-or-fallback" : (imageUrlToDisplay === fallbackImageUrl ? "fallback" : "ai-generated-or-cached")}
+      unoptimized={finalSrc.startsWith('data:')} // Keep unoptimized for base64, server URLs are optimized by Next/Image
     />
   );
 };
