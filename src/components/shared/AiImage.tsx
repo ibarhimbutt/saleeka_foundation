@@ -4,7 +4,7 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { generateIllustration, type GenerateIllustrationInput } from '@/ai/flows/generate-illustration-flow';
+import { generateIllustration, type GenerateIllustrationInput, type GenerateIllustrationOutput } from '@/ai/flows/generate-illustration-flow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,8 +15,8 @@ type AiImageProps = {
   width: number;
   height: number;
   className?: string;
-  fallbackImageUrl?: string; // To show while loading or on error
-  imageClassName?: string; // For specific styling of the next/image component
+  fallbackImageUrl?: string; 
+  imageClassName?: string; 
 };
 
 const AiImage: React.FC<AiImageProps> = ({
@@ -30,15 +30,13 @@ const AiImage: React.FC<AiImageProps> = ({
 }) => {
   const [imageUrlToDisplay, setImageUrlToDisplay] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null); // Stores a generic error message for UI
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    // Using a more specific cache key format
     const cacheKey = `ai-image-url-cache::${prompt.toLowerCase().replace(/\s+/g, '-')}`;
 
     const generateOrFetchUrl = async () => {
-      // Check localStorage for a cached URL first
       try {
         const cachedUrl = localStorage.getItem(cacheKey);
         if (cachedUrl && isMounted) {
@@ -47,19 +45,18 @@ const AiImage: React.FC<AiImageProps> = ({
           return;
         }
       } catch (e) {
-        // Log localStorage read error as a warning, but don't let it break the flow
         console.warn("AiImage: Failed to read image URL from localStorage:", e);
       }
 
       setIsLoading(true);
-      setError(null); // Reset error state for new attempt
+      setError(null);
 
       try {
-        const input: GenerateIllustrationInput = { prompt: prompt }; // Ensure prompt is passed directly
-        const result = await generateIllustration(input);
+        const input: GenerateIllustrationInput = { prompt: prompt };
+        const result: GenerateIllustrationOutput = await generateIllustration(input);
         
         if (isMounted) {
-          if (result.imageUrl) { // Expecting a URL (could be data URI or public URL from future server cache)
+          if (result.imageUrl) {
             setImageUrlToDisplay(result.imageUrl);
             try {
               localStorage.setItem(cacheKey, result.imageUrl);
@@ -67,34 +64,21 @@ const AiImage: React.FC<AiImageProps> = ({
               console.warn("AiImage: Failed to write image URL to localStorage:", e);
             }
           } else {
-            // This case handles if the flow returns a result without a URL, but doesn't throw.
-            setError("Image generation flow returned no URL.");
+            const flowError = result.error || "Image generation flow returned no image URL.";
+            setError(flowError);
+            if (flowError.toLowerCase().includes('rate limit')) {
+              console.warn(`AiImage: Rate limit for prompt "${prompt}". Using fallback. Flow message: ${flowError}`);
+            } else {
+              console.error(`AiImage: Error for prompt "${prompt}". Using fallback. Flow message: ${flowError}`);
+            }
           }
         }
-      } catch (e: any) { // Catching 'any' to inspect error properties
-        let isRateLimitError = false;
-        let errorMessage = "Failed to load image.";
-
-        if (e instanceof Error && e.message) {
-          errorMessage = e.message;
-          if (e.message.includes('429') || e.message.includes('QuotaFailure') || e.message.toLowerCase().includes('rate limit')) {
-            isRateLimitError = true;
-          }
-        } else if (typeof e === 'string') {
-          errorMessage = e;
-           if (e.includes('429') || e.includes('QuotaFailure') || e.toLowerCase().includes('rate limit')) {
-            isRateLimitError = true;
-          }
-        }
-
-        if (isRateLimitError) {
-          console.warn(`AiImage: API rate limit hit for prompt "${prompt}". Using fallback. Details: ${errorMessage}`);
-        } else {
-          console.error(`AiImage: Error generating/fetching image URL for prompt "${prompt}":`, errorMessage, e);
-        }
-        
+      } catch (e: any) { 
+        // This catch block is for unexpected errors from the flow call itself (e.g. network issue to flow)
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        console.error(`AiImage: Unexpected error calling generateIllustration flow for prompt "${prompt}":`, errorMessage, e);
         if (isMounted) {
-          setError(isRateLimitError ? "API rate limit reached." : "Failed to load image.");
+          setError("Failed to communicate with image generation service.");
         }
       } finally {
         if (isMounted) {
@@ -103,15 +87,13 @@ const AiImage: React.FC<AiImageProps> = ({
       }
     };
 
-    if (prompt) {
+    if (prompt && prompt.trim() !== "") {
       generateOrFetchUrl();
     } else {
-      // No prompt provided, rely on fallback or show error.
       setIsLoading(false);
       if (!fallbackImageUrl) {
           setError("No prompt provided for image generation.");
       } else {
-        // If no prompt but fallback is there, use fallback directly.
         setImageUrlToDisplay(fallbackImageUrl);
       }
     }
@@ -119,7 +101,7 @@ const AiImage: React.FC<AiImageProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [prompt]); // Dependency array only includes prompt
+  }, [prompt]); // Re-run if prompt changes. FallbackImageUrl, width, height, etc., are assumed stable for a given prompt.
 
   if (isLoading) {
     return (
@@ -131,12 +113,9 @@ const AiImage: React.FC<AiImageProps> = ({
     );
   }
 
-  // Determine final source: error state takes precedence, then displayed URL, then fallback.
   const finalSrc = error ? fallbackImageUrl : (imageUrlToDisplay || fallbackImageUrl);
 
   if (!finalSrc) {
-     // This block renders if there's an error AND no fallbackImageUrl, 
-     // OR if imageUrlToDisplay is null AND no fallbackImageUrl.
      return (
       <div 
         className={cn(
@@ -159,16 +138,19 @@ const AiImage: React.FC<AiImageProps> = ({
       alt={alt}
       width={width}
       height={height}
-      className={cn(className, imageClassName)} // Apply both general and specific image classNames
-      data-ai-source={error ? "error-or-fallback" : (imageUrlToDisplay === fallbackImageUrl ? "fallback-direct" : (imageUrlToDisplay ? "ai-generated-or-cached" : "fallback-implicit"))}
+      className={cn(className, imageClassName)}
+      data-ai-source={error ? "error-or-fallback" : (imageUrlToDisplay === fallbackImageUrl && !imageUrlToDisplay?.startsWith('data:') ? "fallback-direct" : (imageUrlToDisplay ? "ai-generated-or-cached" : "fallback-implicit"))}
       unoptimized={finalSrc.startsWith('data:')} 
-      onError={() => {
-        // This Next/Image onError can catch issues with the finalSrc itself (e.g. broken URL)
-        // and force a fallback if not already in an error state from generation.
-        if (isMounted && imageUrlToDisplay !== fallbackImageUrl) { // Avoid error loop if fallback also fails
+      onError={(e) => {
+        // This Next/Image onError handles issues with the finalSrc itself (e.g. broken URL)
+        if (isMounted && imageUrlToDisplay !== fallbackImageUrl && finalSrc !== fallbackImageUrl) { 
             console.warn(`AiImage: Next/Image failed to load src: "${finalSrc}". Attempting fallback for prompt: "${prompt}".`);
-            setError("Image source failed to load."); // This will make finalSrc pick fallbackImageUrl
-            setImageUrlToDisplay(null); // Clear potentially bad URL
+            setError("Image source failed to load."); 
+            setImageUrlToDisplay(null); 
+        } else if (isMounted && finalSrc === fallbackImageUrl && fallbackImageUrl) {
+            // If even the fallback fails to load, log it.
+            console.error(`AiImage: Fallback image also failed to load for prompt "${prompt}": ${fallbackImageUrl}`);
+            setError("Fallback image also failed to load.");
         }
       }}
     />
@@ -176,4 +158,3 @@ const AiImage: React.FC<AiImageProps> = ({
 };
 
 export default AiImage;
-
