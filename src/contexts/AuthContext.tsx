@@ -6,7 +6,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase'; // Client-side Firebase auth
 import { useRouter } from 'next/navigation';
-import {NextRouter} from 'next/router';
+// Removed unused import: import {NextRouter} from 'next/router';
 
 
 interface AuthContextType {
@@ -23,13 +23,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    // Check if the imported 'auth' object appears to be a valid Firebase Auth instance
+    if (auth && typeof auth.onAuthStateChanged === 'function') {
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      console.warn("AuthContext: Firebase auth object appears uninitialized or invalid. Authentication features will be unavailable.");
+      setUser(null); // Explicitly set user to null
+      setLoading(false); // Stop loading, user will be null
+    }
+  }, []); // Empty dependency array is correct as `auth` is a module-level import
 
   const logout = async () => {
     setLoading(true);
@@ -57,3 +63,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
