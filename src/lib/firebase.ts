@@ -19,6 +19,12 @@ let db: Firestore;
 let storage: FirebaseStorage;
 
 if (typeof window !== 'undefined' && !getApps().length) {
+  if (!firebaseConfig.apiKey) {
+    console.error(
+      'Firebase API key (NEXT_PUBLIC_FIREBASE_API_KEY) is missing. ' +
+      'Please check your environment variables. Firebase will not initialize correctly.'
+    );
+  }
   try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
@@ -28,7 +34,7 @@ if (typeof window !== 'undefined' && !getApps().length) {
   } catch (error) {
     console.error("Error initializing Firebase client SDK:", error);
     // Fallback or dummy objects to prevent further errors if initialization fails
-    app = {} as FirebaseApp; // Provide a default empty app object or handle appropriately
+    app = {} as FirebaseApp; 
     auth = {} as Auth;
     db = {} as Firestore;
     storage = {} as FirebaseStorage;
@@ -38,11 +44,10 @@ if (typeof window !== 'undefined' && !getApps().length) {
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+  // console.log("Firebase client SDK already initialized."); // Optional: uncomment for debugging
 } else {
   // This case should ideally not be hit in a typical client-side scenario
-  // but added for completeness if this file were somehow imported server-side without `typeof window` check
-  // For server-side, firebaseAdmin.ts should be used.
-  console.warn("Firebase client SDK attempting to initialize in a non-browser environment or already initialized scenarios not fully covered. This might lead to unexpected behavior.");
+  console.warn("Firebase client SDK: Non-browser environment or unexpected initialization scenario.");
   app = {} as FirebaseApp;
   auth = {} as Auth;
   db = {} as Firestore;
