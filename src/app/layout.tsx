@@ -1,8 +1,10 @@
+
 import type { Metadata } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import MainLayout from '@/components/layout/MainLayout';
+import { AuthProvider } from '@/contexts/AuthContext'; // Ensure AuthProvider is imported
 
 const inter = Inter({
   subsets: ['latin'],
@@ -31,9 +33,11 @@ export default function RootLayout({
         {/* Google Fonts links are handled by next/font, no need for manual <link> tags */}
       </head>
       <body className="font-body antialiased">
-        <MainLayout>
-          {children}
-        </MainLayout>
+        <AuthProvider> {/* AuthProvider now wraps MainLayout and thus all its children like Header */}
+          <MainLayout>
+            {children}
+          </MainLayout>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

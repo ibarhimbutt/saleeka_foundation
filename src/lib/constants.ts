@@ -1,13 +1,15 @@
 
-import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home, LayoutDashboard, Users2, Building2, ImageUp } from 'lucide-react';
+import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home, LayoutDashboard, Users2, Building2, ImageUp, UserCircle, LogIn, LogOut } from 'lucide-react';
 import type React from 'react';
 
 export type NavLink = {
   href: string;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
+  action?: () => void; // For logout or other actions
 };
 
+// Base navigation links visible to everyone
 export const navLinks: NavLink[] = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/about', label: 'About Us', icon: Info },
@@ -15,127 +17,21 @@ export const navLinks: NavLink[] = [
   { href: '/get-involved', label: 'Get Involved', icon: Users },
   { href: '/blog', label: 'Blog', icon: MessageSquare },
   { href: '/contact', label: 'Contact Us', icon: Phone },
-  { href: '/admin', label: 'Admin', icon: LayoutDashboard },
+  // Admin link removed, will be added dynamically in Header
 ];
 
 export type Program = {
-  id: string;
+  id: string; // Document ID from Firestore
   title: string;
   category: 'Mentorship' | 'Student Project' | 'Internship' | 'Scholarship';
   description: string;
-  image?: string;
+  image?: string; // URL to image in Firebase Storage or placeholder
   tags?: string[];
+  // Firestore timestamps will be handled by server-side logic if needed
+  // createdAt?: Timestamp; 
+  // updatedAt?: Timestamp;
 };
 
-export const samplePrograms: Program[] = [
-  {
-    id: 'mentorship-tech',
-    title: 'Tech Mentorship Program',
-    category: 'Mentorship',
-    description: 'Connect with experienced tech professionals for guidance and career advice. This program helps students navigate the tech industry, develop skills, and build a strong network. We pair students with mentors based on their career aspirations and the mentor\'s area of expertise. Regular check-ins and goal setting are part of the program to ensure a fruitful experience for both.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Tech', 'Career', 'Networking'],
-  },
-  {
-    id: 'project-community-app',
-    title: 'Community Connect App',
-    category: 'Student Project',
-    description: 'Develop a mobile application to connect local community members with resources and events. This is a hands-on project that allows students to apply their coding skills to a real-world problem. Students will work in teams, following an agile development process, from ideation to deployment. The goal is to create a user-friendly app that makes a tangible difference in the local area.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Mobile App', 'Community', 'Development'],
-  },
-  {
-    id: 'internship-marketing',
-    title: 'Digital Marketing Internship',
-    category: 'Internship',
-    description: 'Gain practical experience in digital marketing, including SEO, content creation, and social media management. Work with a dynamic team on exciting campaigns. Interns will be involved in strategy development, campaign execution, and performance analysis, providing a comprehensive learning experience in the fast-paced world of digital marketing.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Marketing', 'SEO', 'Social Media'],
-  },
-  {
-    id: 'scholarship-stem',
-    title: 'STEM Advancement Scholarship',
-    category: 'Scholarship',
-    description: 'Financial support for students pursuing degrees in Science, Technology, Engineering, and Mathematics. Aimed at fostering innovation and diversity in STEM fields. This scholarship not only provides financial aid but also offers access to exclusive workshops and networking events with leaders in STEM.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['STEM', 'Financial Aid', 'Education'],
-  },
-  {
-    id: 'mentorship-arts',
-    title: 'Creative Arts Mentorship',
-    category: 'Mentorship',
-    description: 'Get paired with established artists and creative professionals. Explore your artistic talents, receive portfolio reviews, and gain insights into the creative industries. This program is for aspiring visual artists, musicians, writers, and designers.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Arts', 'Creative', 'Portfolio'],
-  },
-  {
-    id: 'project-sustainability',
-    title: 'Campus Sustainability Initiative',
-    category: 'Student Project',
-    description: 'Join a team to design and implement a sustainability project on campus or in the local community. Projects can range from waste reduction programs to renewable energy solutions. Develop leadership and project management skills while making a positive environmental impact.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Environment', 'Sustainability', 'Leadership'],
-  },
-  {
-    id: 'internship-nonprofit',
-    title: 'Non-Profit Management Internship',
-    category: 'Internship',
-    description: 'Gain hands-on experience in the non-profit sector. Assist with fundraising, program coordination, and community outreach for a mission-driven organization. Understand the operational aspects of non-profits and contribute to meaningful causes.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Non-Profit', 'Social Impact', 'Management'],
-  },
-  {
-    id: 'scholarship-leadership',
-    title: 'Emerging Leaders Scholarship',
-    category: 'Scholarship',
-    description: 'A scholarship designed for students who demonstrate exceptional leadership potential and a commitment to community service. This program aims to support and cultivate the next generation of leaders by providing financial assistance and leadership development opportunities.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Leadership', 'Community Service', 'Development']
-  },
-  {
-    id: 'project-health-tech',
-    title: 'AI in Healthcare Project',
-    category: 'Student Project',
-    description: 'Explore applications of AI in healthcare by working on a project that could involve diagnostic tools, patient data analysis, or a health monitoring system. Collaborate with healthcare professionals and AI experts. This project offers a unique chance to contribute to the cutting-edge field of health technology.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['AI', 'Healthcare', 'Innovation', 'Tech']
-  },
-  {
-    id: 'mentorship-entrepreneurship',
-    title: 'Startup Launchpad Mentorship',
-    category: 'Mentorship',
-    description: 'For aspiring entrepreneurs. Get guidance from successful startup founders and venture capitalists on everything from idea validation to pitching your business. This program includes workshops on business modeling, market research, and funding strategies.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Entrepreneurship', 'Startup', 'Business', 'Innovation']
-  },
-  {
-    id: 'internship-data-science',
-    title: 'Data Science & Analytics Internship',
-    category: 'Internship',
-    description: 'Work on real-world data sets to extract insights, build predictive models, and contribute to data-driven decision-making. Interns will gain experience with tools like Python, R, SQL, and various machine learning libraries. This is an opportunity to dive deep into the world of big data and analytics.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Data Science', 'Analytics', 'Machine Learning', 'Big Data']
-  },
-  {
-    id: 'scholarship-humanities',
-    title: 'Arts & Humanities Impact Scholarship',
-    category: 'Scholarship',
-    description: 'A scholarship supporting students in the arts and humanities who are passionate about using their studies to create social impact. This could be through creative writing, historical research with community relevance, or socially engaged art projects. We believe in the power of humanities to shape a better world.',
-    image: 'https://placehold.co/600x400.png',
-    tags: ['Humanities', 'Arts', 'Social Impact', 'Research']
-  }
-];
-
-export type BlogPost = {
-  id: string;
-  title: string;
-  author: string;
-  date: string;
-  excerpt: string;
-  imageUrl: string;
-  tags: string[];
-  content?: string;
-};
 
 export const sampleBlogPosts: BlogPost[] = [
   {
@@ -270,7 +166,7 @@ export const involvementTypes: InvolvementType[] = [
   },
 ];
 
-// Admin Data Structures and Sample Data
+// Admin Data Structures and Sample Data (To be replaced by Firestore eventually)
 
 export type StudentProfile = {
   id: string;
@@ -338,6 +234,7 @@ export const sampleDonorProfiles: DonorProfile[] = [
   { id: 'donor4', name: 'Bob Johnson', email: 'bob.j@example.com', donationDate: '2023-07-20', amount: 250, type: 'Individual', status: 'Processed' },
 ];
 
+// For Admin Sidebar
 export const adminNavLinks: NavLink[] = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/students', label: 'Students', icon: Users2 },
@@ -348,3 +245,13 @@ export const adminNavLinks: NavLink[] = [
 ];
 
 
+export type BlogPost = {
+  id: string;
+  title: string;
+  author: string;
+  date: string;
+  excerpt: string;
+  imageUrl: string;
+  tags: string[];
+  content?: string;
+};
