@@ -23,17 +23,15 @@ if (!admin.apps.length) {
     // initializeApp() can often be called without arguments.
     // Locally, GOOGLE_APPLICATION_CREDENTIALS environment variable must point to your service account key JSON file.
     admin.initializeApp();
-    console.log("generateIllustrationFlow: Firebase Admin SDK initialized.");
+    console.log("generateIllustrationFlow: Firebase Admin SDK initialized successfully.");
   } catch (e: any) {
-    console.error("generateIllustrationFlow: Firebase Admin SDK failed to initialize. Ensure GOOGLE_APPLICATION_CREDENTIALS is set for local dev or the service account has permissions in the deployed environment.", e.message);
-    // Depending on the app's requirements, you might want to throw this error
-    // or handle it by disabling caching. For now, we'll log and continue,
-    // and image generation will proceed without caching if admin init fails.
+    console.error("generateIllustrationFlow: Firebase Admin SDK failed to initialize. Ensure GOOGLE_APPLICATION_CREDENTIALS is set for local dev or the service account has permissions in the deployed environment. Caching will be disabled. Error:", e.message);
+    // Caching will be disabled if admin init fails, flow will fallback to directGenerate.
   }
 }
 
-const db = admin.firestore();
-const storageBucket = admin.storage().bucket(); // Default bucket
+const db = admin.apps.length ? admin.firestore() : null;
+const storageBucket = admin.apps.length ? admin.storage().bucket() : null; // Default bucket
 
 const GOOGLE_IMAGE_MODEL = 'googleai/gemini-2.0-flash-exp';
 const MEDIA_COLLECTION_NAME = 'media';
@@ -75,9 +73,8 @@ const generateIllustrationFlow = ai.defineFlow(
     outputSchema: GenerateIllustrationOutputSchema,
   },
   async (input): Promise<GenerateIllustrationOutput> => {
-    if (!admin.apps.length) {
-        console.warn("generateIllustrationFlow: Firebase Admin SDK not initialized. Proceeding without caching.");
-        // Fallback to direct generation without caching if admin features are unavailable
+    if (!db || !storageBucket) {
+        console.warn("generateIllustrationFlow: Firebase Admin SDK (Firestore or Storage) not available. Proceeding with direct generation without caching.");
         return directGenerate(input.prompt);
     }
 
@@ -91,17 +88,17 @@ const generateIllustrationFlow = ai.defineFlow(
       if (mediaDocSnap.exists) {
         const cachedMedia = mediaDocSnap.data() as MediaItem;
         if (cachedMedia.imageUrl) {
-          console.log(`generateIllustrationFlow: Cache hit for prompt "${input.prompt}" (key: ${promptKey}).`);
+          console.log(`generateIllustrationFlow: Cache hit for prompt "${input.prompt}" (key: ${promptKey}). URL: ${cachedMedia.imageUrl}`);
           return { imageUrl: cachedMedia.imageUrl, provider: cachedMedia.provider || 'cache-firestore', cached: true };
         }
       }
       console.log(`generateIllustrationFlow: Cache miss for prompt "${input.prompt}" (key: ${promptKey}). Generating new image.`);
     } catch (e: any) {
       console.error(`generateIllustrationFlow: Error checking Firestore cache for promptKey "${promptKey}":`, e.message);
-      // Proceed to generation if cache check fails
+      // Proceed to generation if cache check fails, log and continue.
     }
 
-    // Step 2: Generate Image using Genkit (if not found in cache)
+    // Step 2: Generate Image using Genkit (if not found in cache or cache check failed)
     let generatedDataUri: string | null = null;
     let genProvider: string | undefined;
     let genError: string | undefined;
@@ -159,7 +156,8 @@ const generateIllustrationFlow = ai.defineFlow(
       const imageBuffer = Buffer.from(base64Data, 'base64');
       const imageSizeBytes = imageBuffer.length;
 
-      const fileName = `${promptKey}-${Date.now()}.${mimeType.split('/')[1] || 'png'}`;
+      const fileExtension = mimeType.split('/')[1] || 'png';
+      const fileName = `${promptKey}-${Date.now()}.${fileExtension}`;
       const filePath = `${ILLUSTRATION_STORAGE_PATH}/${fileName}`;
       const file = storageBucket.file(filePath);
 
@@ -168,14 +166,7 @@ const generateIllustrationFlow = ai.defineFlow(
         public: true, // Make the file publicly readable
       });
       
-      // Ensure file is public. If default ACLs aren't public, explicitly make it so.
-      // await file.makePublic(); // This might be needed depending on bucket ACLs. Usually `public: true` in save is enough.
-
-      const publicUrl = file.publicUrl(); // For GCS, ensure this format is correct or use `getSignedUrl` for temporary access.
-                                        // `publicUrl()` is often `https://storage.googleapis.com/[BUCKET_NAME]/[OBJECT_PATH]`
-                                        // Ensure your bucket has public access enabled for these files if using publicUrl directly.
-                                        // A more robust way for web clients to access is via getDownloadURL from client SDK,
-                                        // but since this is a server flow returning a URL, publicUrl() is standard if bucket is public.
+      const publicUrl = file.publicUrl();
 
       // Step 4: Save metadata to Firestore
       const mediaItem: MediaItem = {
@@ -183,7 +174,7 @@ const generateIllustrationFlow = ai.defineFlow(
         promptKey: promptKey,
         imageUrl: publicUrl,
         provider: genProvider!,
-        createdAt: FieldValue.serverTimestamp() as admin.firestore.Timestamp, // Firestore Admin SDK timestamp
+        createdAt: FieldValue.serverTimestamp() as admin.firestore.Timestamp,
         imageSizeBytes,
         mimeType,
       };
@@ -194,7 +185,9 @@ const generateIllustrationFlow = ai.defineFlow(
 
     } catch (e: any) {
       console.error(`generateIllustrationFlow: Error during upload to Storage or saving to Firestore for promptKey "${promptKey}":`, e.message);
-      return { imageUrl: null, error: `Failed to store generated image: ${e.message.substring(0,150)}`, provider: genProvider, cached: false };
+      // Return the data URI if storage/firestore fails, so the user might still see an image client-side (e.g. AiImage might display it)
+      // but mark it as not cached and provide an error related to storage.
+      return { imageUrl: generatedDataUri, error: `Failed to store generated image for caching: ${e.message.substring(0,150)}. Displaying non-cached version.`, provider: genProvider, cached: false };
     }
   }
 );
@@ -240,3 +233,4 @@ async function directGenerate(prompt: string): Promise<GenerateIllustrationOutpu
     return { imageUrl: null, error: genError, provider: 'googleai', cached: false };
   }
 }
+
