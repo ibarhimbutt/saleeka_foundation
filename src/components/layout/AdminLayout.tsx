@@ -18,13 +18,21 @@ type AdminLayoutProps = {
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, logout } = useAuth(); // Use the auth context
+  const { user, userProfile, loading, logout } = useAuth(); // Use the auth context
 
   React.useEffect(() => {
     if (!loading && !user && pathname !== '/admin/login') {
       router.replace('/admin/login');
     }
   }, [user, loading, router, pathname]);
+
+  // Log user role and type when userProfile is available
+  React.useEffect(() => {
+    if (userProfile) {
+      console.log("Admin User Role:", userProfile.role);
+      console.log("Admin User Type:", userProfile.type);
+    }
+  }, [userProfile]);
 
   if (loading) {
     return (
@@ -35,13 +43,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   }
 
   if (!user && pathname !== '/admin/login') {
-    // This check is mainly for the initial render before useEffect kicks in,
-    // or if somehow useEffect doesn't redirect immediately.
-    // The actual redirection is handled by useEffect.
-    return null; // Or a minimal loading/redirecting message
+    return null; 
   }
   
-  // If we are on the login page and the user is already logged in, redirect to admin dashboard
   if (user && pathname === '/admin/login') {
     router.replace('/admin');
     return (
@@ -51,21 +55,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       </div>
     );
   }
-
-
-  // If it's the login page, don't render the full AdminLayout (sidebar, etc.)
-  // The login page has its own layout structure.
-  // This case should ideally be handled by routing logic (e.g. group routes)
-  // but for simplicity, we check pathname here.
-  // However, the AuthProvider in `app/admin/layout.tsx` wraps all admin routes,
-  // so AdminLayout will still be invoked for /admin/login.
-  // The useEffect hook above handles redirecting away from /admin/login if already logged in.
-  // If not logged in, and on /admin/login, we shouldn't show the sidebar.
-  // This scenario means the `children` prop IS the login page.
-  // This specific component (AdminLayout.tsx) is meant for PAGES *OTHER THAN* login.
-  // This component (AdminLayout) is applied via the AdminDashboardPage, AdminStudentsPage, etc.
-  // The /admin/login page uses its own layout directly.
-  // The `user` check and `useEffect` at the top are the primary guards.
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -107,7 +96,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <div className="mt-auto">
               {user && (
                 <div className="mb-2 px-2 py-1 text-xs text-muted-foreground">
-                  Logged in as: {user.email}
+                  Logged in as: {userProfile?.displayName || user.email}
+                  <br />
+                  Role: {userProfile?.role || 'N/A'} | Type: {userProfile?.type || 'N/A'}
                 </div>
               )}
               <Button variant="outline" className="w-full justify-start" onClick={logout}>
