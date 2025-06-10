@@ -14,19 +14,17 @@ export default function RootAdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="font-body antialiased">
-        <AuthProvider> {/* Wrap with AuthProvider */}
-          {/* 
-            The AdminLayout component (with sidebar) is applied by individual page.tsx files 
-            within the /admin route group (e.g., /admin/page.tsx, /admin/students/page.tsx).
-            The /admin/login/page.tsx does NOT use that shared AdminLayout component.
-            This RootAdminLayout provides the AuthContext to all children under /admin.
-          */}
-          {children}
-        </AuthProvider>
-        <Toaster />
-      </body>
-    </html>
+    <>
+      <AuthProvider> {/* Wrap with AuthProvider */}
+        {/* 
+          The AdminLayout component (with sidebar) is applied by individual page.tsx files 
+          within the /admin route group (e.g., /admin/page.tsx, /admin/students/page.tsx).
+          The /admin/login/page.tsx does NOT use that shared AdminLayout component.
+          This RootAdminLayout provides the AuthContext to all children under /admin.
+        */}
+        {children}
+      </AuthProvider>
+      <Toaster />
+    </>
   );
 }

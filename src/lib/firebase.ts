@@ -4,14 +4,18 @@ import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
+
+
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDCIkAgbB36p2u-xWXcVLHKWCKeIIAW364",
+  authDomain: "saleeka-connect.firebaseapp.com",
+  projectId: "saleeka-connect",
+  storageBucket: "saleeka-connect.firebasestorage.app",
+  messagingSenderId: "429561316956",
+  appId: "1:429561316956:web:e935d62db3111a62ca8899"
 };
+
+
 
 let app: FirebaseApp;
 let auth: Auth;
