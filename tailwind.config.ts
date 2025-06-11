@@ -1,5 +1,5 @@
 import type {Config} from 'tailwindcss';
-import tailwindDefaultColors from 'tailwindcss/colors'; // Import default colors
+import { gray, neutral } from 'tailwindcss/colors'; // Import specific palettes
 
 export default {
   darkMode: ['class'],
@@ -16,11 +16,12 @@ export default {
         "2xl": "1400px",
       },
     },
-    // Default Tailwind colors are preserved, and we extend them below.
     extend: {
       colors: {
-        // Explicitly add the full 'gray' palette for the typography plugin
-        gray: tailwindDefaultColors.gray,
+        // Explicitly add gray and neutral for the typography plugin
+        gray: gray,
+        neutral: neutral,
+
         // Custom HSL-based colors
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
@@ -85,20 +86,12 @@ export default {
       },
       keyframes: {
         'accordion-down': {
-          from: {
-            height: '0',
-          },
-          to: {
-            height: 'var(--radix-accordion-content-height)',
-          },
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
         },
         'accordion-up': {
-          from: {
-            height: 'var(--radix-accordion-content-height)',
-          },
-          to: {
-            height: '0',
-          },
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
         },
       },
       animation: {
