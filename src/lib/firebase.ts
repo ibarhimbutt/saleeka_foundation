@@ -10,37 +10,21 @@ let auth: Auth | undefined;
 let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
 
-// Log all NEXT_PUBLIC_ variables available on the client for diagnostics
-if (typeof window !== 'undefined') {
-  console.log("Firebase.ts: Available NEXT_PUBLIC_ environment variables on client:");
-  let foundFirebaseVars = false;
-  for (const key in process.env) {
-    if (key.startsWith("NEXT_PUBLIC_")) {
-      console.log(`- ${key}: ${process.env[key]}`);
-      if (key.startsWith("NEXT_PUBLIC_FIREBASE_")) {
-        foundFirebaseVars = true;
-      }
-    }
-  }
-  if (!foundFirebaseVars) {
-    console.warn("Firebase.ts: No NEXT_PUBLIC_FIREBASE_ variables found in process.env on the client.");
-  }
-}
-
+// Hardcoded Firebase configuration values (TEMPORARY WORKAROUND)
 const firebaseConfigValues = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID // Optional
+  apiKey: "AIzaSyDCIkAgbB36p2u-xWXcVLHKWCKeIIAW364",
+  authDomain: "saleeka-connect.firebaseapp.com",
+  projectId: "saleeka-connect",
+  storageBucket: "saleeka-connect.firebasestorage.app", // Corrected: removed leading space and .app
+  messagingSenderId: "429561316956",
+  appId: "1:429561316956:web:e935d62db3111a62ca8899",
+  measurementId: "YOUR_FIREBASE_MEASUREMENT_ID" // Kept as placeholder, update if you have it
 };
 
 // Log the specific values being attempted for Firebase config
 if (typeof window !== 'undefined') {
-  console.log("Firebase.ts: Attempting to use Firebase config values from process.env:");
-  console.log("- apiKey:", firebaseConfigValues.apiKey);
+  console.log("Firebase.ts: Using HARDCODED Firebase config values (TEMPORARY WORKAROUND):");
+  console.log("- apiKey:", firebaseConfigValues.apiKey ? "****" : "MISSING"); // Mask API key in logs
   console.log("- authDomain:", firebaseConfigValues.authDomain);
   console.log("- projectId:", firebaseConfigValues.projectId);
   console.log("- storageBucket:", firebaseConfigValues.storageBucket);
@@ -49,46 +33,42 @@ if (typeof window !== 'undefined') {
   console.log("- measurementId:", firebaseConfigValues.measurementId);
 }
 
-const requiredEnvVars = [
-  'NEXT_PUBLIC_FIREBASE_API_KEY',
-  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-  'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-  'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-  'NEXT_PUBLIC_FIREBASE_APP_ID',
+const requiredConfigKeys: (keyof typeof firebaseConfigValues)[] = [
+  'apiKey',
+  'authDomain',
+  'projectId',
+  'storageBucket',
+  'messagingSenderId',
+  'appId',
 ];
 
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName as keyof typeof process.env]);
+const missingConfigValues = requiredConfigKeys.filter(key => !firebaseConfigValues[key]);
 
 if (typeof window !== 'undefined') { // Ensure this block only runs on client
   if (!getApps().length) { // Only initialize if no apps exist yet on the client
-    if (missingEnvVars.length > 0) {
+    if (missingConfigValues.length > 0) {
       console.error(
-        `CRITICAL Firebase Initialization Error: The following environment variables required by 'src/lib/firebase.ts' were not found: ${missingEnvVars.join(', ')}. ` +
-        "These variables are expected to be in a '.env' or '.env.local' file in your project's ROOT directory. " +
-        "Ensure the file exists, is correctly named (e.g., '.env'), contains these variables with the 'NEXT_PUBLIC_' prefix and valid values from your Firebase project. " +
-        "Most importantly, you MUST FULLY RESTART your Next.js development server (e.g., stop and re-run 'npm run dev') after any changes to this file. " +
-        "Firebase will not initialize correctly without these steps."
+        `CRITICAL Firebase Initialization Error (Hardcoded Values): The following hardcoded Firebase configuration values are missing or empty in 'src/lib/firebase.ts': ${missingConfigValues.join(', ')}. ` +
+        "Please ensure all required values are correctly set in the `firebaseConfigValues` object. " +
+        "Firebase will not initialize correctly without these."
       );
       // app, auth, db, storage remain undefined
     } else {
-      // Log the actual config being used, masking sensitive parts if necessary in future, but for now, full log for debugging.
-      console.log("Firebase.ts: Firebase Config being used for initialization:", firebaseConfigValues);
       try {
-        console.log("Firebase.ts: Attempting to initialize Firebase client SDK...");
+        console.log("Firebase.ts: Attempting to initialize Firebase client SDK with hardcoded values...");
         const initializedApp = initializeApp(firebaseConfigValues);
         app = initializedApp;
         auth = getAuth(initializedApp);
         db = getFirestore(initializedApp);
         storage = getStorage(initializedApp);
-        console.log("Firebase.ts: Firebase client SDK initialized successfully.");
+        console.log("Firebase.ts: Firebase client SDK initialized successfully with hardcoded values.");
       } catch (error: any) {
         console.error(
-          "CRITICAL Error during Firebase client SDK initialization (initializeApp call failed):",
+          "CRITICAL Error during Firebase client SDK initialization (initializeApp call failed with hardcoded values):",
           error.message || String(error),
-          "\nEnsure all Firebase config values in your .env file are correct, especially 'storageBucket' (usually 'YOUR_PROJECT_ID.appspot.com') and 'projectId'."
+          "\nEnsure all hardcoded Firebase config values are correct, especially 'storageBucket' (usually 'YOUR_PROJECT_ID.appspot.com') and 'projectId'."
         );
-        console.error("Firebase.ts: Firebase config that caused error:", firebaseConfigValues);
+        console.error("Firebase.ts: Hardcoded Firebase config that caused error:", firebaseConfigValues);
         // app, auth, db, storage remain undefined
       }
     }
