@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Loader2, UserCircle, Briefcase, Settings } from 'lucide-react';
+import { Loader2, UserCircle, Briefcase, Settings, Users } from 'lucide-react'; // Added Users import
 
 export default function MySaleekaPage() {
   const { user, userProfile, loading } = useAuth();
