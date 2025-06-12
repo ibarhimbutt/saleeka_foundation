@@ -32,6 +32,41 @@ export type Program = {
   // updatedAt?: Timestamp;
 };
 
+export const samplePrograms: Program[] = [
+  {
+    id: 'prog1',
+    title: 'AI Mentorship Program',
+    category: 'Mentorship',
+    description: 'Connect with experienced AI professionals for guidance and career development. Learn about the latest trends and get personalized advice to navigate your journey in the field of Artificial Intelligence. This program includes one-on-one sessions, workshops, and networking opportunities.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['AI', 'Machine Learning', 'Career Growth', 'Networking'],
+  },
+  {
+    id: 'prog2',
+    title: 'Community Impact Project: Green Tech',
+    category: 'Student Project',
+    description: 'Join a team to develop a green technology solution for a local community challenge. This project-based learning experience will allow you to apply your skills in sustainability, engineering, and project management to make a real-world difference. Collaborate with peers and present your solution to stakeholders.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Sustainability', 'Tech for Good', 'Project Management', 'Teamwork'],
+  },
+  {
+    id: 'prog3',
+    title: 'Software Engineering Internship',
+    category: 'Internship',
+    description: 'Gain hands-on experience in a fast-paced tech environment. Work on real software development projects, mentored by senior engineers. This internship offers exposure to the full software development lifecycle, from design to deployment. Enhance your coding skills and build your professional portfolio.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Software Development', 'Internship', 'Tech Skills', 'Full-stack'],
+  },
+  {
+    id: 'prog4',
+    title: 'Innovators Scholarship Fund',
+    category: 'Scholarship',
+    description: 'Apply for the Saleeka Innovators Scholarship, supporting talented students in STEM fields. This scholarship aims to reduce financial barriers and empower the next generation of innovators. Awardees will also receive access to exclusive workshops and networking events.',
+    image: 'https://placehold.co/600x400.png',
+    tags: ['Scholarship', 'STEM', 'Education', 'Financial Aid'],
+  },
+];
+
 
 export const sampleBlogPosts: BlogPost[] = [
   {
@@ -255,3 +290,6 @@ export type BlogPost = {
   tags: string[];
   content?: string;
 };
+
+
+    
