@@ -13,96 +13,96 @@ h1, h2, h3, h4, h5, h6 {
 
 @layer base {
   :root {
-    --background: 0 0% 98%; /* #F9F9F9 Light Gray */
-    --foreground: 0 0% 20%; /* #333333 Dark Gray */
+    --background: 220 20% 97%; /* Very Light Blue-Gray, e.g., #f5f7f9 */
+    --foreground: 210 10% 23%; /* Dark Gray-Blue for text, e.g., #313a42 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 20%;
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 210 10% 23%; /* Dark Gray-Blue */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 20%;
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 210 10% 23%; /* Dark Gray-Blue */
 
-    --primary: 122 60% 40%; /* Upwork-like Green (e.g., #299929) */
+    --primary: 210 89% 40%; /* LinkedIn Blue, e.g., #0A66C2 */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 210 30% 95%; /* Light Blue-Gray */
-    --secondary-foreground: 122 60% 40%; /* Primary Green for text on secondary */
+    --secondary: 210 25% 94%; /* Lighter Gray-Blue, e.g., #eef1f5 */
+    --secondary-foreground: 210 89% 40%; /* Primary Blue for text on secondary */
 
-    --muted: 210 30% 95%; /* Same as secondary */
-    --muted-foreground: 0 0% 40%; /* Darker Muted Gray */
+    --muted: 210 25% 94%; /* Same as secondary */
+    --muted-foreground: 210 10% 45%; /* Medium Gray-Blue, e.g., #66707a */
 
-    --accent: 210 70% 50%; /* Professional Blue (e.g., #2673C2) */
+    --accent: 200 80% 50%; /* A slightly lighter, vibrant blue for accents */
     --accent-foreground: 0 0% 100%; /* White */
 
-    --destructive: 0 75% 50%; /* Clear Red (e.g., #E13D3D) */
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 75% 50%; /* Standard Red */
+    --destructive-foreground: 0 0% 98%; /* Light Foreground for destructive */
 
-    --border: 210 20% 90%; /* Very Light Blue-Gray Border */
-    --input: 210 20% 90%; /* Same as border */
-    --ring: 122 60% 50%; /* Primary Green for rings (slightly lighter) */
+    --border: 210 20% 88%; /* Light Gray-Blue Border, e.g., #d9dfe5 */
+    --input: 210 20% 88%; /* Same as border for input */
+    --ring: 210 89% 50%; /* Primary Blue for rings (slightly lighter for focus) */
 
-    --radius: 0.3rem; /* Slightly sharper corners */
+    --radius: 0.3rem; /* Existing radius */
 
     /* Chart colors adjusted to new theme */
-    --chart-1: 122 60% 40%; /* Primary Green */
-    --chart-2: 210 70% 50%; /* Accent Blue */
-    --chart-3: 122 40% 60%; /* Lighter/Muted Green */
-    --chart-4: 210 50% 70%; /* Lighter/Muted Blue */
-    --chart-5: 0 0% 50%;   /* Neutral Gray */
+    --chart-1: 210 89% 40%; /* Primary Blue */
+    --chart-2: 200 80% 50%; /* Accent Blue */
+    --chart-3: 210 70% 60%; /* Lighter/Muted Primary Blue */
+    --chart-4: 200 60% 70%; /* Lighter/Muted Accent Blue */
+    --chart-5: 210 10% 50%;   /* Neutral Gray-Blue */
 
     /* Sidebar colors aligned with main theme */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 122 60% 40%;
+    --sidebar-background: 220 20% 97%;
+    --sidebar-foreground: 210 10% 23%;
+    --sidebar-primary: 210 89% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 70% 50%;
+    --sidebar-accent: 200 80% 50%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 210 20% 90%;
-    --sidebar-ring: 122 60% 50%;
+    --sidebar-border: 210 20% 88%;
+    --sidebar-ring: 210 89% 50%;
   }
 
   .dark {
-    --background: 210 10% 15%; /* Dark Blue-Gray */
-    --foreground: 0 0% 95%; /* Lighter foreground */
+    --background: 210 12% 12%; /* Dark Blue-Gray, e.g., #1c2025 */
+    --foreground: 210 15% 90%; /* Light Gray-Blue for text */
 
-    --card: 210 10% 20%;
-    --card-foreground: 0 0% 95%;
+    --card: 210 10% 18%; /* Darker card background, e.g., #262c33 */
+    --card-foreground: 210 15% 90%;
 
-    --popover: 210 10% 20%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 210 10% 18%;
+    --popover-foreground: 210 15% 90%;
 
-    --primary: 122 60% 50%; /* Lighter Green for dark mode */
-    --primary-foreground: 0 0% 10%; /* Dark text for contrast */
+    --primary: 210 90% 55%; /* Brighter LinkedIn Blue for dark mode */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
 
-    --secondary: 210 10% 25%;
-    --secondary-foreground: 122 60% 50%; /* Lighter Green */
+    --secondary: 210 10% 22%; /* Slightly lighter dark gray for secondary elements */
+    --secondary-foreground: 210 90% 55%; /* Primary dark mode blue for text */
 
-    --muted: 210 10% 25%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 210 10% 22%;
+    --muted-foreground: 210 10% 60%; /* Lighter Muted Gray-Blue */
 
-    --accent: 210 70% 60%; /* Lighter Blue for dark mode */
-    --accent-foreground: 0 0% 10%; /* Dark text for contrast */
+    --accent: 200 85% 60%; /* Brighter Accent Blue for dark mode */
+    --accent-foreground: 0 0% 100%; /* White text on accent */
 
     --destructive: 0 70% 55%; /* Lighter Red for dark mode */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 210 10% 30%;
+    --border: 210 10% 30%; /* Darker Gray-Blue Border */
     --input: 210 10% 30%;
-    --ring: 122 60% 50%; /* Primary Green variant for rings */
+    --ring: 210 90% 55%; /* Primary dark mode blue for rings */
 
     /* Chart colors for dark mode */
-    --chart-1: 122 60% 50%;
-    --chart-2: 210 70% 60%;
+    --chart-1: 210 90% 55%;
+    --chart-2: 200 85% 60%;
     
     /* Sidebar colors for dark mode */
-    --sidebar-background: 210 10% 20%; /* Consistent with card background */
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 122 60% 50%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 210 70% 60%;
-    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-background: 210 10% 18%; /* Consistent with card background */
+    --sidebar-foreground: 210 15% 90%;
+    --sidebar-primary: 210 90% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 85% 60%;
+    --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 210 10% 30%;
-    --sidebar-ring: 122 60% 50%;
+    --sidebar-ring: 210 90% 55%;
   }
 }
 
