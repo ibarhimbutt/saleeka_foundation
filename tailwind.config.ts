@@ -1,5 +1,4 @@
 import type {Config} from 'tailwindcss';
-import { gray, neutral } from 'tailwindcss/colors'; // Import specific palettes
 
 export default {
   darkMode: ['class'],
@@ -18,11 +17,9 @@ export default {
     },
     extend: {
       colors: {
-        // Explicitly add gray and neutral for the typography plugin
-        gray: gray,
-        neutral: neutral,
-
-        // Custom HSL-based colors
+        // NOTE: Manual 'gray' palette removed to rely on Tailwind's default
+        // for the typography plugin.
+        // Custom HSL-based colors:
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
