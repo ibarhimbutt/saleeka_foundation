@@ -15,16 +15,16 @@ const firebaseConfigValues = {
   apiKey: "AIzaSyDCIkAgbB36p2u-xWXcVLHKWCKeIIAW364",
   authDomain: "saleeka-connect.firebaseapp.com",
   projectId: "saleeka-connect",
-  storageBucket: "saleeka-connect.firebasestorage.app", // Corrected: removed leading space and .app
+  storageBucket: "saleeka-connect.firebasestorage.app",
   messagingSenderId: "429561316956",
   appId: "1:429561316956:web:e935d62db3111a62ca8899",
-  measurementId: "YOUR_FIREBASE_MEASUREMENT_ID" // Kept as placeholder, update if you have it
+  measurementId: "YOUR_FIREBASE_MEASUREMENT_ID" // Kept as placeholder
 };
 
 // Log the specific values being attempted for Firebase config
 if (typeof window !== 'undefined') {
   console.log("Firebase.ts: Using HARDCODED Firebase config values (TEMPORARY WORKAROUND):");
-  console.log("- apiKey:", firebaseConfigValues.apiKey ? "****" : "MISSING"); // Mask API key in logs
+  console.log("- apiKey:", firebaseConfigValues.apiKey ? "****" : "MISSING");
   console.log("- authDomain:", firebaseConfigValues.authDomain);
   console.log("- projectId:", firebaseConfigValues.projectId);
   console.log("- storageBucket:", firebaseConfigValues.storageBucket);
@@ -33,49 +33,30 @@ if (typeof window !== 'undefined') {
   console.log("- measurementId:", firebaseConfigValues.measurementId);
 }
 
-const requiredConfigKeys: (keyof typeof firebaseConfigValues)[] = [
-  'apiKey',
-  'authDomain',
-  'projectId',
-  'storageBucket',
-  'messagingSenderId',
-  'appId',
-];
-
-const missingConfigValues = requiredConfigKeys.filter(key => !firebaseConfigValues[key]);
-
-if (typeof window !== 'undefined') { // Ensure this block only runs on client
-  if (!getApps().length) { // Only initialize if no apps exist yet on the client
-    if (missingConfigValues.length > 0) {
+// Client-side initialization
+if (typeof window !== 'undefined') {
+  if (!getApps().length) {
+    try {
+      console.log("Firebase.ts: Attempting to initialize Firebase client SDK with hardcoded values...");
+      // Directly use the hardcoded values
+      const initializedApp = initializeApp(firebaseConfigValues);
+      app = initializedApp;
+      auth = getAuth(initializedApp);
+      db = getFirestore(initializedApp);
+      storage = getStorage(initializedApp);
+      console.log("Firebase.ts: Firebase client SDK initialized successfully with hardcoded values.");
+    } catch (error: any) {
       console.error(
-        `CRITICAL Firebase Initialization Error (Hardcoded Values): The following hardcoded Firebase configuration values are missing or empty in 'src/lib/firebase.ts': ${missingConfigValues.join(', ')}. ` +
-        "Please ensure all required values are correctly set in the `firebaseConfigValues` object. " +
-        "Firebase will not initialize correctly without these."
+        "CRITICAL Error during Firebase client SDK initialization (initializeApp call failed with hardcoded values):",
+        error.message || String(error),
+        "\nEnsure all hardcoded Firebase config values in 'firebaseConfigValues' object in 'src/lib/firebase.ts' are correct."
       );
-      // app, auth, db, storage remain undefined
-    } else {
-      try {
-        console.log("Firebase.ts: Attempting to initialize Firebase client SDK with hardcoded values...");
-        const initializedApp = initializeApp(firebaseConfigValues);
-        app = initializedApp;
-        auth = getAuth(initializedApp);
-        db = getFirestore(initializedApp);
-        storage = getStorage(initializedApp);
-        console.log("Firebase.ts: Firebase client SDK initialized successfully with hardcoded values.");
-      } catch (error: any) {
-        console.error(
-          "CRITICAL Error during Firebase client SDK initialization (initializeApp call failed with hardcoded values):",
-          error.message || String(error),
-          "\nEnsure all hardcoded Firebase config values are correct, especially 'storageBucket' (usually 'YOUR_PROJECT_ID.appspot.com') and 'projectId'."
-        );
-        console.error("Firebase.ts: Hardcoded Firebase config that caused error:", firebaseConfigValues);
-        // app, auth, db, storage remain undefined
-      }
+      console.error("Firebase.ts: Hardcoded Firebase config that caused error:", firebaseConfigValues);
+      // app, auth, db, storage will remain undefined
     }
-  } else { // Firebase app already initialized on the client
+  } else {
     const existingApp = getApp(); // Get the default app
     app = existingApp;
-    // Ensure services are assigned if re-evaluating module (e.g. HMR)
     if (!auth) auth = getAuth(existingApp);
     if (!db) db = getFirestore(existingApp);
     if (!storage) storage = getStorage(existingApp);
