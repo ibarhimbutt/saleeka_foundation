@@ -6,19 +6,14 @@ import {openAI} from 'genkitx-openai';
 const googleApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const openaiApiKey = process.env.OPENAI_API_KEY;
 
-const activePlugins: any[] = [];
+const configuredPlugins:any[] = [];
 
 if (googleApiKey) {
   try {
-    const pluginInstance = googleAI({apiKey: googleApiKey});
-    if (pluginInstance && typeof pluginInstance === 'object' && pluginInstance !== null) {
-      activePlugins.push(pluginInstance);
-      console.log('Genkit.ts: Google AI plugin initialized and added.');
-    } else {
-      console.warn('Genkit.ts: Google AI plugin failed to initialize properly (returned falsy or non-object).');
-    }
+    configuredPlugins.push(googleAI({apiKey: googleApiKey}));
+    console.log('Genkit.ts: Google AI plugin configured.');
   } catch (e: any) {
-    console.error('Genkit.ts: Error during Google AI plugin initialization:', e.message || String(e));
+    console.error('Genkit.ts: Error configuring Google AI plugin:', e.message || String(e));
   }
 } else {
   console.warn(
@@ -28,15 +23,10 @@ if (googleApiKey) {
 
 if (openaiApiKey) {
    try {
-    const pluginInstance = openAI({apiKey: openaiApiKey});
-    if (pluginInstance && typeof pluginInstance === 'object' && pluginInstance !== null) {
-      activePlugins.push(pluginInstance);
-      console.log('Genkit.ts: OpenAI plugin initialized and added.');
-    } else {
-      console.warn('Genkit.ts: OpenAI plugin failed to initialize properly (returned falsy or non-object).');
-    }
+    configuredPlugins.push(openAI({apiKey: openaiApiKey}));
+    console.log('Genkit.ts: OpenAI plugin configured.');
   } catch (e: any) {
-    console.error('Genkit.ts: Error during OpenAI plugin initialization:', e.message || String(e));
+    console.error('Genkit.ts: Error configuring OpenAI plugin:', e.message || String(e));
   }
 } else {
   console.warn(
@@ -44,52 +34,37 @@ if (openaiApiKey) {
   );
 }
 
+let defaultTextModelChoice: string | undefined = undefined;
 
-if (activePlugins.length === 0) {
-    console.warn("Genkit.ts: No AI plugins configured. Genkit might not function as expected for AI operations.");
+const isGoogleActive = configuredPlugins.some(p => p && p.name && p.name.toLowerCase().includes('google'));
+const isOpenAIActive = configuredPlugins.some(p => p && p.name && p.name.toLowerCase().includes('openai'));
+
+if (isOpenAIActive) {
+    defaultTextModelChoice = 'openai/gpt-3.5-turbo'; // Default for text if OpenAI is primary
+    console.log(`Genkit.ts: OpenAI plugin active. Default text model set to: ${defaultTextModelChoice}`);
+} else if (isGoogleActive) {
+    defaultTextModelChoice = 'googleai/gemini-1.5-flash-latest';
+    console.log(`Genkit.ts: Google AI plugin active (OpenAI not). Default text model set to: ${defaultTextModelChoice}`);
+} else {
+    console.log('Genkit.ts: No primary AI text model could be set as no plugins seem active or recognized by name.');
 }
 
-const isGoogleAIPluginActive = activePlugins.some(
-  (p: any) => p && typeof p.name === 'string' && p.name.toLowerCase().includes('google')
-);
-
-const isOpenAIPluginActive = activePlugins.some(
-  (p: any) => p && typeof p.name === 'string' && p.name.toLowerCase().includes('openai')
-);
-
-let defaultTextModel: string | undefined = undefined;
-let defaultImageModel: string | undefined = undefined;
-
-if (isOpenAIPluginActive) {
-  defaultTextModel = 'openai/gpt-3.5-turbo'; // Example text model
-  defaultImageModel = 'openai/dall-e-3';    // Default DALL-E model
-  console.log(`Genkit.ts: OpenAI plugin is active. Default text model: ${defaultTextModel}, Default image model: ${defaultImageModel}`);
-} else if (isGoogleAIPluginActive) {
-  defaultTextModel = 'googleai/gemini-1.5-flash-latest';
-  // Note: Gemini image generation model specified directly in flow
-  console.log(`Genkit.ts: Google AI plugin is active (OpenAI not). Default text model: ${defaultTextModel}`);
-}
-
+console.log(`Genkit.ts: Initializing Genkit with ${configuredPlugins.length} plugin(s).`);
 
 export const ai = genkit({
-  plugins: activePlugins,
-  model: defaultTextModel,
-  // We don't set a default image model globally here as flows specify it.
+  plugins: configuredPlugins,
+  model: defaultTextModelChoice, // Sets the default model for ai.generate if not overridden in the call
 });
 
-
-if (activePlugins.length > 0) {
+if (configuredPlugins.length > 0) {
     let modelNames = "unknown";
     try {
-        const models = ai.listModels ? ai.listModels() : [];
+        const models = ai.listModels ? ai.listModels() : []; // Check if listModels exists
         modelNames = models.map(m => m.name).join(', ') || 'none listed by Genkit';
+        console.log(`Genkit.ts: Genkit initialized. Available models from configured plugins: ${modelNames}. Default text model (if not overridden): ${defaultTextModelChoice || 'Not set'}`);
     } catch(e: any) {
         console.warn("Genkit.ts: Could not list models from Genkit after initialization:", e.message || String(e));
     }
-    
-    const defaultModelForLog = defaultTextModel || 'not set explicitly or unavailable';
-
-    console.log(`Genkit.ts: Genkit initialized with ${activePlugins.length} plugin(s). Default text model for ai.generate (if not overridden): ${defaultModelForLog}. Available models from initialized plugins: ${modelNames}`);
 } else {
-    console.log("Genkit.ts: Genkit initialized with no active plugins.");
+    console.log("Genkit.ts: Genkit initialized with no active plugins. AI operations will likely fail.");
 }
