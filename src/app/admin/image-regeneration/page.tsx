@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import AiImage from '@/components/shared/AiImage';
 import { Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { sanitizePromptForClientCacheKey } from '@/lib/utils';
 
 export default function AdminImageRegenerationPage() {
   const [prompt, setPrompt] = useState<string>('');
@@ -29,12 +30,13 @@ export default function AdminImageRegenerationPage() {
     setIsLoading(true);
 
     // Clear client-side cache for this prompt
-    const cacheKey = `ai-image-url-cache::${prompt.toLowerCase().replace(/\s+/g, '-')}`;
+    const sanitizedPromptKey = sanitizePromptForClientCacheKey(prompt);
+    const cacheKey = `ai-image-url-cache::${sanitizedPromptKey}`;
     try {
       localStorage.removeItem(cacheKey);
       toast({
         title: "Cache Cleared",
-        description: `Local cache for prompt "${prompt}" cleared. Regenerating...`,
+        description: `Local cache for prompt "${prompt}" (key: ${sanitizedPromptKey}) cleared. Regenerating...`,
       });
     } catch (e) {
       console.warn("Failed to clear localStorage item:", e);

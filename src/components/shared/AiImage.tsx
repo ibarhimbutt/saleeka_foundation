@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { generateIllustration, type GenerateIllustrationInput, type GenerateIllustrationOutput } from '@/ai/flows/generate-illustration-flow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, sanitizePromptForClientCacheKey } from '@/lib/utils';
 
 type AiImageProps = {
   prompt: string;
@@ -41,7 +41,8 @@ const AiImage: React.FC<AiImageProps> = ({
     if (!isMounted) return;
 
     let isEffectMounted = true;
-    const cacheKey = `ai-image-url-cache::${prompt.toLowerCase().replace(/\s+/g, '-')}`;
+    const sanitizedPromptKey = sanitizePromptForClientCacheKey(prompt);
+    const cacheKey = `ai-image-url-cache::${sanitizedPromptKey}`;
 
     const generateOrFetchUrl = async () => {
       try {
@@ -59,7 +60,7 @@ const AiImage: React.FC<AiImageProps> = ({
       setError(null);
 
       try {
-        const input: GenerateIllustrationInput = { prompt: prompt };
+        const input: GenerateIllustrationInput = { prompt: prompt }; // Send original prompt to flow
         const result: GenerateIllustrationOutput = await generateIllustration(input);
         
         if (isEffectMounted) {
@@ -162,15 +163,15 @@ const AiImage: React.FC<AiImageProps> = ({
       className={cn(className, imageClassName)}
       data-ai-source={error ? "error-or-fallback" : (imageUrlToDisplay === fallbackImageUrl && !imageUrlToDisplay?.startsWith('data:') ? "fallback-direct" : (imageUrlToDisplay ? "ai-generated-or-cached" : "fallback-implicit"))}
       unoptimized={finalSrc.startsWith('data:')} 
-      onError={() => { // Simplified onError: if finalSrc fails, and it wasn't already the fallback, try the fallback.
-        if (isEffectMounted && finalSrc !== fallbackImageUrl && fallbackImageUrl) { 
+      onError={() => { 
+        if (isMounted && finalSrc !== fallbackImageUrl && fallbackImageUrl) { 
             console.warn(`AiImage: Next/Image failed to load src: "${finalSrc}". Attempting fallback for prompt: "${prompt}".`);
             setError("Image source failed to load, using fallback."); 
-            setImageUrlToDisplay(null); // This will cause finalSrc to become fallbackImageUrl in next render
-        } else if (isEffectMounted && finalSrc === fallbackImageUrl && fallbackImageUrl) {
+            setImageUrlToDisplay(null); 
+        } else if (isMounted && finalSrc === fallbackImageUrl && fallbackImageUrl) {
             console.error(`AiImage: Fallback image also failed to load for prompt "${prompt}": ${fallbackImageUrl}`);
             setError("Fallback image also failed to load.");
-        } else if (isEffectMounted && !fallbackImageUrl) {
+        } else if (isMounted && !fallbackImageUrl) {
             console.error(`AiImage: Image failed to load and no fallback available for prompt: "${prompt}"`);
             setError("Image source failed to load, no fallback.");
         }
