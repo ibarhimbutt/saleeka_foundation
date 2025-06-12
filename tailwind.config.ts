@@ -1,5 +1,5 @@
 import type {Config} from 'tailwindcss';
-import tailwindColors from 'tailwindcss/colors'; // Import the default colors
+// No longer importing tailwindColors if not explicitly used below
 
 export default {
   darkMode: ['class'],
@@ -24,43 +24,41 @@ export default {
     // is used as the base, which the typography plugin relies on.
     extend: {
       colors: {
-        // Explicitly include the default gray palette
-        gray: tailwindColors.gray,
         // Your custom HSL-based colors (LinkedIn inspired)
-        background: 'hsl(var(--background))', // e.g., 220 20% 97% (Very Light Blue-Gray)
-        foreground: 'hsl(var(--foreground))', // e.g., 210 10% 23% (Dark Gray-Blue for text)
+        background: 'hsl(var(--background))', 
+        foreground: 'hsl(var(--foreground))', 
 
         card: {
-          DEFAULT: 'hsl(var(--card))', // e.g., 0 0% 100% (White)
-          foreground: 'hsl(var(--card-foreground))', // e.g., 210 10% 23% (Dark Gray-Blue)
+          DEFAULT: 'hsl(var(--card))', 
+          foreground: 'hsl(var(--card-foreground))', 
         },
         popover: {
-          DEFAULT: 'hsl(var(--popover))', // e.g., 0 0% 100% (White)
-          foreground: 'hsl(var(--popover-foreground))', // e.g., 210 10% 23% (Dark Gray-Blue)
+          DEFAULT: 'hsl(var(--popover))', 
+          foreground: 'hsl(var(--popover-foreground))', 
         },
         primary: {
-          DEFAULT: 'hsl(var(--primary))', // e.g., 210 89% 40% (LinkedIn Blue)
-          foreground: 'hsl(var(--primary-foreground))', // e.g., 0 0% 100% (White)
+          DEFAULT: 'hsl(var(--primary))', 
+          foreground: 'hsl(var(--primary-foreground))', 
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))', // e.g., 210 25% 94% (Lighter Gray-Blue)
-          foreground: 'hsl(var(--secondary-foreground))', // e.g., 210 89% 40% (Primary Blue for text on secondary)
+          DEFAULT: 'hsl(var(--secondary))', 
+          foreground: 'hsl(var(--secondary-foreground))', 
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))', // e.g., 210 25% 94% (Same as secondary)
-          foreground: 'hsl(var(--muted-foreground))', // e.g., 210 10% 45% (Medium Gray-Blue)
+          DEFAULT: 'hsl(var(--muted))', 
+          foreground: 'hsl(var(--muted-foreground))', 
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))', // e.g., 200 80% 50% (A slightly lighter, vibrant blue for accents)
-          foreground: 'hsl(var(--accent-foreground))', // e.g., 0 0% 100% (White)
+          DEFAULT: 'hsl(var(--accent))', 
+          foreground: 'hsl(var(--accent-foreground))', 
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))', // e.g., 0 75% 50% (Standard Red)
-          foreground: 'hsl(var(--destructive-foreground))', // e.g., 0 0% 98% (Light Foreground for destructive)
+          DEFAULT: 'hsl(var(--destructive))', 
+          foreground: 'hsl(var(--destructive-foreground))', 
         },
-        border: 'hsl(var(--border))', // e.g., 210 20% 88% (Light Gray-Blue Border)
-        input: 'hsl(var(--input))', // e.g., 210 20% 88% (Same as border for input)
-        ring: 'hsl(var(--ring))', // e.g., 210 89% 50% (Primary Blue for rings)
+        border: 'hsl(var(--border))', 
+        input: 'hsl(var(--input))', 
+        ring: 'hsl(var(--ring))', 
 
         chart: {
           '1': 'hsl(var(--chart-1))',
