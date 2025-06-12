@@ -1,17 +1,16 @@
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-// import {openAI} from 'genkitx-openai'; // OpenAI plugin remains commented out
+import {openAI} from 'genkitx-openai'; // Uncommented OpenAI plugin
 
 const googleApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-// const openaiApiKey = process.env.OPENAI_API_KEY;
+const openaiApiKey = process.env.OPENAI_API_KEY; // Ensure this is set in your .env
 
-const activePlugins: any[] = []; // Initialize as any[] or a more specific Genkit Plugin type if available
+const activePlugins: any[] = [];
 
 if (googleApiKey) {
   try {
     const pluginInstance = googleAI({apiKey: googleApiKey});
-    // Basic check to see if the plugin initialized to something sensible
     if (pluginInstance && typeof pluginInstance === 'object' && pluginInstance !== null) {
       activePlugins.push(pluginInstance);
       console.log('Google AI plugin initialized and added.');
@@ -27,10 +26,7 @@ if (googleApiKey) {
   );
 }
 
-/*
-// OpenAI plugin section remains commented out to prevent "plugin is not a function" errors
-// and because its model is also reported as "Not Found".
-if (openaiApiKey) {
+if (openaiApiKey) { // Enabled OpenAI plugin initialization
    try {
     const pluginInstance = openAI({apiKey: openaiApiKey});
     if (pluginInstance && typeof pluginInstance === 'object' && pluginInstance !== null) {
@@ -44,10 +40,10 @@ if (openaiApiKey) {
   }
 } else {
   console.warn(
-    'OpenAI API key is not set. OpenAI features (like DALL-E fallback) will be unavailable.'
+    'OpenAI API key is not set. OpenAI features (like DALL-E) will be unavailable.'
   );
 }
-*/
+
 
 if (activePlugins.length === 0) {
     console.warn("No AI plugins configured. Genkit might not function as expected for AI operations.");
@@ -58,11 +54,25 @@ const isGoogleAIPluginActive = activePlugins.some(
   (p: any) => p && typeof p.name === 'string' && p.name.toLowerCase().includes('google')
 );
 
+// Determine if OpenAI plugin is present
+const isOpenAIPluginActive = activePlugins.some(
+  (p: any) => p && typeof p.name === 'string' && p.name.toLowerCase().includes('openai')
+);
+
+// Prefer OpenAI for default model if active, otherwise fallback to Google AI if active
+let defaultTextModel: string | undefined = undefined;
+if (isOpenAIPluginActive) {
+  // You might want to set a default OpenAI text model here, e.g., 'openai/gpt-3.5-turbo'
+  // For now, let's keep it focused on image generation, so default model isn't critical.
+  // defaultTextModel = 'openai/gpt-3.5-turbo'; // Example
+} else if (isGoogleAIPluginActive) {
+  defaultTextModel = 'googleai/gemini-1.5-flash-latest';
+}
+
+
 export const ai = genkit({
   plugins: activePlugins,
-  // Default text model updated to a more common one.
-  // Set default model only if Google AI plugin is active, otherwise it might cause issues if no plugins are loaded.
-  model: isGoogleAIPluginActive ? 'googleai/gemini-1.5-flash-latest' : undefined,
+  model: defaultTextModel, // Default model for text generation, image model is specified in flow
 });
 
 
@@ -70,17 +80,16 @@ export const ai = genkit({
 if (activePlugins.length > 0) {
     let modelNames = "unknown";
     try {
-        // Ensure ai.listModels() is available and a function before calling
         const models = ai.listModels ? ai.listModels() : [];
         modelNames = models.map(m => m.name).join(', ') || 'none listed by Genkit';
     } catch(e: any) {
         console.warn("Could not list models from Genkit after initialization:", e.message || String(e));
     }
     
-    const defaultModelArray = ai.listModels ? ai.listModels().filter(m => m.name === (isGoogleAIPluginActive ? 'googleai/gemini-1.5-flash-latest' : undefined)) : [];
+    const defaultModelArray = ai.listModels && defaultTextModel ? ai.listModels().filter(m => m.name === defaultTextModel) : [];
     const defaultModelName = defaultModelArray.length > 0 && defaultModelArray[0] ? defaultModelArray[0].name : 'not set explicitly or default model unavailable';
 
-    console.log(`Genkit initialized with ${activePlugins.length} plugin(s). Default model: ${defaultModelName}. Available models from initialized plugins: ${modelNames}`);
+    console.log(`Genkit initialized with ${activePlugins.length} plugin(s). Default text model: ${defaultModelName}. Available models from initialized plugins: ${modelNames}`);
 } else {
     console.log("Genkit initialized with no active plugins.");
 }

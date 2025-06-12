@@ -11,29 +11,24 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import * as admin from 'firebase-admin';
-import type { DecodedIdToken } from 'firebase-admin/auth'; // For potential future use with auth
+import type { DecodedIdToken } from 'firebase-admin/auth';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { MediaItem } from '@/lib/firestoreTypes';
+import fetch from 'node-fetch'; // For fetching image from URL if OpenAI returns URL
 
-// Initialize Firebase Admin SDK if not already initialized.
-// For App Hosting, this might be automatic. For local dev, GOOGLE_APPLICATION_CREDENTIALS env var is needed.
 if (!admin.apps.length) {
   try {
-    // In a managed environment like Cloud Functions or App Hosting,
-    // initializeApp() can often be called without arguments.
-    // Locally, GOOGLE_APPLICATION_CREDENTIALS environment variable must point to your service account key JSON file.
     admin.initializeApp();
     console.log("generateIllustrationFlow: Firebase Admin SDK initialized successfully.");
   } catch (e: any) {
     console.error("generateIllustrationFlow: Firebase Admin SDK failed to initialize. Ensure GOOGLE_APPLICATION_CREDENTIALS is set for local dev or the service account has permissions in the deployed environment. Caching will be disabled. Error:", e.message);
-    // Caching will be disabled if admin init fails, flow will fallback to directGenerate.
   }
 }
 
 const db = admin.apps.length ? admin.firestore() : null;
-const storageBucket = admin.apps.length ? admin.storage().bucket() : null; // Default bucket
+const storageBucket = admin.apps.length ? admin.storage().bucket() : null;
 
-const GOOGLE_IMAGE_MODEL = 'googleai/gemini-2.0-flash-exp';
+const OPENAI_IMAGE_MODEL = 'openai/dall-e-3'; // Using DALL-E 3
 const MEDIA_COLLECTION_NAME = 'media';
 const ILLUSTRATION_STORAGE_PATH = 'illustrations/cache';
 
@@ -47,19 +42,18 @@ export type GenerateIllustrationInput = z.infer<typeof GenerateIllustrationInput
 const GenerateIllustrationOutputSchema = z.object({
   imageUrl: z.string().url().nullable().describe("The public URL of the generated or cached image, or null if generation failed."),
   error: z.string().optional().describe("An error message if image generation failed."),
-  provider: z.string().optional().describe("The AI provider used for generation (e.g., 'googleai', 'cache')."),
+  provider: z.string().optional().describe("The AI provider used for generation (e.g., 'openai', 'cache')."),
   cached: z.boolean().optional().describe("Indicates if the image was served from cache.")
 });
 export type GenerateIllustrationOutput = z.infer<typeof GenerateIllustrationOutputSchema>;
 
 
-// Helper to create a sanitized key from the prompt for use as a document ID
 const createPromptKey = (prompt: string): string => {
   return prompt
     .toLowerCase()
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/[^a-z0-9-]/g, '') // Remove non-alphanumeric (excluding hyphens)
-    .slice(0, 150); // Truncate to a reasonable length for a document ID
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .slice(0, 150);
 };
 
 export async function generateIllustration(input: GenerateIllustrationInput): Promise<GenerateIllustrationOutput> {
@@ -81,7 +75,6 @@ const generateIllustrationFlow = ai.defineFlow(
     const promptKey = createPromptKey(input.prompt);
 
     try {
-      // Step 1: Check Firestore for an existing image URL for this promptKey
       const mediaDocRef = db.collection(MEDIA_COLLECTION_NAME).doc(promptKey);
       const mediaDocSnap = await mediaDocRef.get();
 
@@ -95,49 +88,55 @@ const generateIllustrationFlow = ai.defineFlow(
       console.log(`generateIllustrationFlow: Cache miss for prompt "${input.prompt}" (key: ${promptKey}). Generating new image.`);
     } catch (e: any) {
       console.error(`generateIllustrationFlow: Error checking Firestore cache for promptKey "${promptKey}":`, e.message);
-      // Proceed to generation if cache check fails, log and continue.
     }
 
-    // Step 2: Generate Image using Genkit (if not found in cache or cache check failed)
     let generatedDataUri: string | null = null;
     let genProvider: string | undefined;
     let genError: string | undefined;
 
     try {
-      console.log(`generateIllustrationFlow: Attempting Google Gemini (${GOOGLE_IMAGE_MODEL}) for prompt: "${input.prompt}"`);
+      console.log(`generateIllustrationFlow: Attempting OpenAI DALL-E (${OPENAI_IMAGE_MODEL}) for prompt: "${input.prompt}"`);
       const {media} = await ai.generate({
-        model: GOOGLE_IMAGE_MODEL,
-        prompt: `Generate a vibrant and professional illustration for a website. Prompt: ${input.prompt}`,
-        config: {
-          responseModalities: ['TEXT', 'IMAGE'],
-           safetySettings: [ // Add safety settings to be less restrictive for typical illustration prompts
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          ],
-        },
+        model: OPENAI_IMAGE_MODEL, // Using DALL-E model
+        prompt: `A highly detailed, vibrant, and professional illustration suitable for a website. Ensure the style is modern and appealing. Prompt: ${input.prompt}`,
+        // No Gemini-specific config like responseModalities or safetySettings array needed for DALL-E.
+        // DALL-E 3 might support 'size' (e.g., '1024x1024') or 'quality' (e.g., 'hd') in config if genkitx-openai supports passing them.
+        // For now, keeping it simple.
       });
 
-      if (media && media.url && media.url.startsWith('data:')) {
-        generatedDataUri = media.url;
-        genProvider = 'googleai';
+      if (media && media.url) {
+        if (media.url.startsWith('data:')) {
+          generatedDataUri = media.url;
+        } else if (media.url.startsWith('http')) {
+          // OpenAI returned an HTTPS URL, download it and convert to data URI
+          console.log(`generateIllustrationFlow: OpenAI returned URL, downloading: ${media.url}`);
+          const response = await fetch(media.url);
+          if (!response.ok) {
+            throw new Error(`Failed to download image from OpenAI URL (${media.url}): ${response.status} ${response.statusText}`);
+          }
+          const imageBuffer = Buffer.from(await response.arrayBuffer());
+          const contentType = response.headers.get('content-type') || 'image/png'; // Default to png
+          generatedDataUri = `data:${contentType};base64,${imageBuffer.toString('base64')}`;
+          console.log(`generateIllustrationFlow: Successfully downloaded and converted image from OpenAI URL. Content-Type: ${contentType}`);
+        } else {
+           throw new Error(`OpenAI returned an unexpected media URL format: ${media.url}`);
+        }
+        genProvider = 'openai';
       } else {
-        genError = 'Google Gemini returned invalid image data or no media URL.';
-        console.warn(`generateIllustrationFlow (Google): Image generation for prompt "${input.prompt}" returned invalid data or no media.`);
+        genError = 'OpenAI/DALL-E returned invalid image data or no media URL.';
+        console.warn(`generateIllustrationFlow (OpenAI): Image generation for prompt "${input.prompt}" returned invalid data or no media.`);
       }
     } catch (e: any) {
       let originalError = e instanceof Error ? e.message : String(e);
-      console.warn(`generateIllustrationFlow (Google): Error for prompt "${input.prompt}": ${originalError}`);
-       if (originalError.includes('429') || originalError.includes('QuotaFailure') || originalError.toLowerCase().includes('rate limit')) {
-        genError = `Google Gemini API rate limit reached.`;
-      } else if ((originalError.toLowerCase().includes('model') && originalError.toLowerCase().includes('not found')) || originalError.toLowerCase().includes('not_found')) {
-        genError = `Google Gemini model '${GOOGLE_IMAGE_MODEL}' not found or inaccessible.`;
-      } else if (originalError.toLowerCase().includes('safety settings') || originalError.toLowerCase().includes('blocked for safety')) {
-        genError = `Image generation blocked due to safety settings. Original: ${originalError.substring(0,150)}`;
-      }
-      else {
-        genError = `Google Gemini generation failed: ${originalError.substring(0,150)}`;
+      console.warn(`generateIllustrationFlow (OpenAI): Error for prompt "${input.prompt}": ${originalError}`);
+      if (originalError.includes('429') || originalError.toLowerCase().includes('rate limit') || originalError.toLowerCase().includes('quota')) {
+        genError = `OpenAI API rate limit or quota reached.`;
+      } else if (originalError.toLowerCase().includes('billing') || originalError.toLowerCase().includes('credit')) {
+        genError = `OpenAI API billing issue. Please check your account.`;
+      } else if (originalError.toLowerCase().includes('safety') || originalError.toLowerCase().includes('policy')) {
+        genError = `Image generation blocked by OpenAI's safety policy. Original: ${originalError.substring(0,150)}`;
+      } else {
+        genError = `OpenAI/DALL-E generation failed: ${originalError.substring(0,150)}`;
       }
     }
 
@@ -145,11 +144,10 @@ const generateIllustrationFlow = ai.defineFlow(
       return { imageUrl: null, error: genError || "Image generation failed with an unknown error.", provider: genProvider, cached: false };
     }
 
-    // Step 3: Upload to Firebase Storage
     try {
       const mimeTypeMatch = generatedDataUri.match(/^data:(image\/\w+);base64,/);
       if (!mimeTypeMatch || !mimeTypeMatch[1]) {
-        throw new Error("Invalid data URI format: MIME type not found.");
+        throw new Error("Invalid data URI format: MIME type not found after processing.");
       }
       const mimeType = mimeTypeMatch[1];
       const base64Data = generatedDataUri.replace(/^data:image\/\w+;base64,/, "");
@@ -163,12 +161,11 @@ const generateIllustrationFlow = ai.defineFlow(
 
       await file.save(imageBuffer, {
         metadata: { contentType: mimeType },
-        public: true, // Make the file publicly readable
+        public: true,
       });
       
       const publicUrl = file.publicUrl();
 
-      // Step 4: Save metadata to Firestore
       const mediaItem: MediaItem = {
         prompt: input.prompt,
         promptKey: promptKey,
@@ -179,58 +176,61 @@ const generateIllustrationFlow = ai.defineFlow(
         mimeType,
       };
       await db.collection(MEDIA_COLLECTION_NAME).doc(promptKey).set(mediaItem);
-      console.log(`generateIllustrationFlow: Successfully generated, uploaded, and cached image for promptKey "${promptKey}". URL: ${publicUrl}`);
+      console.log(`generateIllustrationFlow: Successfully generated with ${genProvider}, uploaded, and cached image for promptKey "${promptKey}". URL: ${publicUrl}`);
 
       return { imageUrl: publicUrl, provider: genProvider, cached: false };
 
     } catch (e: any) {
       console.error(`generateIllustrationFlow: Error during upload to Storage or saving to Firestore for promptKey "${promptKey}":`, e.message);
-      // Return the data URI if storage/firestore fails, so the user might still see an image client-side (e.g. AiImage might display it)
-      // but mark it as not cached and provide an error related to storage.
       return { imageUrl: generatedDataUri, error: `Failed to store generated image for caching: ${e.message.substring(0,150)}. Displaying non-cached version.`, provider: genProvider, cached: false };
     }
   }
 );
 
 
-// Fallback function for direct generation if Firebase Admin is not available
 async function directGenerate(prompt: string): Promise<GenerateIllustrationOutput> {
-  console.log(`directGenerate: Attempting Google Gemini (${GOOGLE_IMAGE_MODEL}) for prompt: "${prompt}" (NO CACHING)`);
+  console.log(`directGenerate: Attempting OpenAI DALL-E (${OPENAI_IMAGE_MODEL}) for prompt: "${prompt}" (NO CACHING)`);
+  let generatedDataUri: string | null = null;
+
   try {
     const {media} = await ai.generate({
-      model: GOOGLE_IMAGE_MODEL,
-      prompt: `Generate a vibrant and professional illustration for a website. Prompt: ${prompt}`,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-         safetySettings: [
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        ],
-      },
+      model: OPENAI_IMAGE_MODEL,
+      prompt: `A highly detailed, vibrant, and professional illustration suitable for a website. Ensure the style is modern and appealing. Prompt: ${prompt}`,
     });
 
-    if (media && media.url && media.url.startsWith('data:')) {
-      return { imageUrl: media.url, provider: 'googleai', cached: false };
+    if (media && media.url) {
+      if (media.url.startsWith('data:')) {
+        generatedDataUri = media.url;
+      } else if (media.url.startsWith('http')) {
+        console.log(`directGenerate: OpenAI returned URL, downloading: ${media.url}`);
+        const response = await fetch(media.url);
+        if (!response.ok) {
+          throw new Error(`Failed to download image from OpenAI URL (${media.url}): ${response.status} ${response.statusText}`);
+        }
+        const imageBuffer = Buffer.from(await response.arrayBuffer());
+        const contentType = response.headers.get('content-type') || 'image/png';
+        generatedDataUri = `data:${contentType};base64,${imageBuffer.toString('base64')}`;
+        console.log(`directGenerate: Successfully downloaded and converted image from OpenAI URL. Content-Type: ${contentType}`);
+      } else {
+        throw new Error(`OpenAI returned an unexpected media URL format: ${media.url}`);
+      }
+      return { imageUrl: generatedDataUri, provider: 'openai', cached: false };
     } else {
-      return { imageUrl: null, error: 'Google Gemini returned invalid image data or no media URL (direct generation).', provider: 'googleai', cached: false };
+      return { imageUrl: null, error: 'OpenAI/DALL-E returned invalid image data or no media URL (direct generation).', provider: 'openai', cached: false };
     }
   } catch (e: any) {
     let originalError = e instanceof Error ? e.message : String(e);
     let genError;
-     if (originalError.includes('429') || originalError.includes('QuotaFailure') || originalError.toLowerCase().includes('rate limit')) {
-      genError = `Google Gemini API rate limit reached.`;
-    } else if ((originalError.toLowerCase().includes('model') && originalError.toLowerCase().includes('not found')) || originalError.toLowerCase().includes('not_found')) {
-      genError = `Google Gemini model '${GOOGLE_IMAGE_MODEL}' not found or inaccessible.`;
-    } else if (originalError.toLowerCase().includes('safety settings') || originalError.toLowerCase().includes('blocked for safety')) {
-        genError = `Image generation blocked due to safety settings. Original: ${originalError.substring(0,150)}`;
+    if (originalError.includes('429') || originalError.toLowerCase().includes('rate limit') || originalError.toLowerCase().includes('quota')) {
+      genError = `OpenAI API rate limit or quota reached.`;
+    } else if (originalError.toLowerCase().includes('billing') || originalError.toLowerCase().includes('credit')) {
+        genError = `OpenAI API billing issue. Please check your account.`;
+    } else if (originalError.toLowerCase().includes('safety') || originalError.toLowerCase().includes('policy')) {
+      genError = `Image generation blocked by OpenAI's safety policy. Original: ${originalError.substring(0,150)}`;
+    } else {
+      genError = `OpenAI/DALL-E generation failed (direct): ${originalError.substring(0,150)}`;
     }
-    else {
-      genError = `Google Gemini generation failed (direct): ${originalError.substring(0,150)}`;
-    }
-    console.warn(`directGenerate (Google): Error for prompt "${prompt}": ${originalError}`);
-    return { imageUrl: null, error: genError, provider: 'googleai', cached: false };
+    console.warn(`directGenerate (OpenAI): Error for prompt "${prompt}": ${originalError}`);
+    return { imageUrl: null, error: genError, provider: 'openai', cached: false };
   }
 }
-
