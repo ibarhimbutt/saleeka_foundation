@@ -10,6 +10,23 @@ let auth: Auth | undefined;
 let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
 
+// Log all NEXT_PUBLIC_ variables available on the client for diagnostics
+if (typeof window !== 'undefined') {
+  console.log("Firebase.ts: Available NEXT_PUBLIC_ environment variables on client:");
+  let foundFirebaseVars = false;
+  for (const key in process.env) {
+    if (key.startsWith("NEXT_PUBLIC_")) {
+      console.log(`- ${key}: ${process.env[key]}`);
+      if (key.startsWith("NEXT_PUBLIC_FIREBASE_")) {
+        foundFirebaseVars = true;
+      }
+    }
+  }
+  if (!foundFirebaseVars) {
+    console.warn("Firebase.ts: No NEXT_PUBLIC_FIREBASE_ variables found in process.env on the client.");
+  }
+}
+
 const firebaseConfigValues = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -19,6 +36,18 @@ const firebaseConfigValues = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID // Optional
 };
+
+// Log the specific values being attempted for Firebase config
+if (typeof window !== 'undefined') {
+  console.log("Firebase.ts: Attempting to use Firebase config values from process.env:");
+  console.log("- apiKey:", firebaseConfigValues.apiKey);
+  console.log("- authDomain:", firebaseConfigValues.authDomain);
+  console.log("- projectId:", firebaseConfigValues.projectId);
+  console.log("- storageBucket:", firebaseConfigValues.storageBucket);
+  console.log("- messagingSenderId:", firebaseConfigValues.messagingSenderId);
+  console.log("- appId:", firebaseConfigValues.appId);
+  console.log("- measurementId:", firebaseConfigValues.measurementId);
+}
 
 const requiredEnvVars = [
   'NEXT_PUBLIC_FIREBASE_API_KEY',
@@ -31,7 +60,7 @@ const requiredEnvVars = [
 
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName as keyof typeof process.env]);
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined') { // Ensure this block only runs on client
   if (!getApps().length) { // Only initialize if no apps exist yet on the client
     if (missingEnvVars.length > 0) {
       console.error(
@@ -44,22 +73,22 @@ if (typeof window !== 'undefined') {
       // app, auth, db, storage remain undefined
     } else {
       // Log the actual config being used, masking sensitive parts if necessary in future, but for now, full log for debugging.
-      console.log("Firebase Config being used for initialization:", firebaseConfigValues);
+      console.log("Firebase.ts: Firebase Config being used for initialization:", firebaseConfigValues);
       try {
-        console.log("Attempting to initialize Firebase client SDK...");
+        console.log("Firebase.ts: Attempting to initialize Firebase client SDK...");
         const initializedApp = initializeApp(firebaseConfigValues);
         app = initializedApp;
         auth = getAuth(initializedApp);
         db = getFirestore(initializedApp);
         storage = getStorage(initializedApp);
-        console.log("Firebase client SDK initialized successfully.");
+        console.log("Firebase.ts: Firebase client SDK initialized successfully.");
       } catch (error: any) {
         console.error(
           "CRITICAL Error during Firebase client SDK initialization (initializeApp call failed):",
           error.message || String(error),
           "\nEnsure all Firebase config values in your .env file are correct, especially 'storageBucket' (usually 'YOUR_PROJECT_ID.appspot.com') and 'projectId'."
         );
-        console.error("Firebase config that caused error:", firebaseConfigValues);
+        console.error("Firebase.ts: Firebase config that caused error:", firebaseConfigValues);
         // app, auth, db, storage remain undefined
       }
     }
@@ -70,7 +99,7 @@ if (typeof window !== 'undefined') {
     if (!auth) auth = getAuth(existingApp);
     if (!db) db = getFirestore(existingApp);
     if (!storage) storage = getStorage(existingApp);
-    // console.log("Firebase client SDK already initialized. Reusing existing instance.");
+    // console.log("Firebase.ts: Firebase client SDK already initialized. Reusing existing instance.");
   }
 }
 
