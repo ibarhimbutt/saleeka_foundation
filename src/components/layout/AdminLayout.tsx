@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LogOut, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext'; 
 
 type AdminLayoutProps = {
   children: React.ReactNode;
@@ -18,7 +18,7 @@ type AdminLayoutProps = {
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, userProfile, loading, logout } = useAuth(); // Use the auth context
+  const { user, userProfile, loading, logout } = useAuth(); 
 
   React.useEffect(() => {
     if (!loading && !user && pathname !== '/admin/login') {
@@ -26,7 +26,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     }
   }, [user, loading, router, pathname]);
 
-  // Log user role and type when userProfile is available
   React.useEffect(() => {
     if (userProfile) {
       console.log("Admin User Role:", userProfile.role);
@@ -74,15 +73,21 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </Link>
             <nav className="flex-1 space-y-1">
               {adminNavLinks.map((link) => {
+                // Defensive check for malformed links, though adminNavLinks is static
+                if (!link || typeof link.href !== 'string' || typeof link.label !== 'string') {
+                  console.error("Malformed admin nav link encountered:", link);
+                  return null; 
+                }
                 const Icon = link.icon;
+                const isActive = pathname === link.href;
                 return (
                   <Button
                     key={link.href}
                     asChild
-                    variant={pathname === link.href ? 'default' : 'ghost'}
+                    variant={isActive ? 'default' : 'ghost'}
                     className={cn(
                       "w-full justify-start",
-                      pathname === link.href && "bg-primary text-primary-foreground hover:bg-primary/90"
+                      isActive && "bg-primary text-primary-foreground hover:bg-primary/90"
                     )}
                   >
                     <Link href={link.href} className="flex items-center gap-3">
@@ -96,7 +101,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <div className="mt-auto">
               {user && (
                 <div className="mb-2 px-2 py-1 text-xs text-muted-foreground">
-                  Logged in as: {userProfile?.displayName || user.email}
+                  Logged in as: {userProfile?.displayName || (user ? user.email : 'N/A')}
                   <br />
                   Role: {userProfile?.role || 'N/A'} | Type: {userProfile?.type || 'N/A'}
                 </div>

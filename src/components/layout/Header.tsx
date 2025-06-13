@@ -23,7 +23,7 @@ const Header = () => {
   }, []);
 
   if (!isMounted) {
-    return ( // Return a basic header structure or null during server render / pre-hydration
+    return ( 
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-20 items-center justify-between">
            <Link href="/" className="flex items-center">
@@ -83,10 +83,12 @@ const Header = () => {
       );
     }
 
-    if (user && userProfile) {
+    // Explicitly check userProfile AND userProfile.type
+    if (user && userProfile && typeof userProfile.type === 'string') {
+      const isAdmin = userProfile.type === 'admin';
       return (
         <>
-          {userProfile.type === 'admin' ? (
+          {isAdmin ? (
             renderLink({ href: '/admin', label: 'Admin', icon: LayoutDashboard }, isMobile)
           ) : (
             renderLink({ href: '/my-saleeka', label: 'My Saleeka', icon: UserCircle }, isMobile)
@@ -103,7 +105,15 @@ const Header = () => {
     if (!user) {
       return renderLink({ href: '/admin/login', label: 'Login', icon: LogIn }, isMobile);
     }
-    return null;
+    
+    // Fallback if user is logged in but profile or type isn't fully ready (should be brief)
+    // This could happen if AuthContext is still fetching/setting the profile from Firestore.
+    return (
+        <div className={cn("flex items-center", isMobile ? "px-4 py-2" : "px-3 py-2")}>
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <span className="sr-only text-xs">Loading profile...</span>
+        </div>
+    );
   };
 
 
@@ -128,12 +138,10 @@ const Header = () => {
           />
         </Link>
 
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-1">
           <NavItems />
         </nav>
 
-        {/* Mobile Navigation */}
         <div className="md:hidden">
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -142,8 +150,8 @@ const Header = () => {
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-full max-w-xs bg-background p-0"> {/* Adjusted padding */}
-              <SheetHeader className="text-left p-4 border-b"> {/* Added padding and border */}
+            <SheetContent side="right" className="w-full max-w-xs bg-background p-0"> 
+              <SheetHeader className="text-left p-4 border-b"> 
                 <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                 <div className="flex justify-between items-center">
                     <Link href="/" className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
@@ -162,7 +170,7 @@ const Header = () => {
                     </Button>
                 </div>
               </SheetHeader>
-              <nav className="flex flex-col space-y-1 p-4"> {/* Added padding */}
+              <nav className="flex flex-col space-y-1 p-4"> 
                   <NavItems mobile />
               </nav>
             </SheetContent>
