@@ -32,26 +32,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(currentUser);
           // Fetch user profile from Firestore
           const userDocRef = doc(db, "users", currentUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists()) {
-            setUserProfile(userDocSnap.data() as UserProfile);
-          } else {
-            // Optional: Create a default profile if it doesn't exist
-            // For now, we'll assume admin users are pre-provisioned in Firestore
-            console.warn(`AuthContext: No profile found in Firestore for user ${currentUser.uid}.`);
-            // Assign a default 'viewer' role and 'unclassified' type if no profile exists
-            // This is a placeholder; ideally, user provisioning handles this.
-            const defaultProfile: UserProfile = {
-              uid: currentUser.uid,
-              email: currentUser.email || "unknown",
-              role: 'viewer' as UserRole, // Default role
-              type: 'unclassified' as UserType, // Default type
-              createdAt: serverTimestamp() as any, // Placeholder, will be converted by Firestore
-            };
-            // To prevent errors, we won't auto-create here but will set a minimal profile for context
-            // await setDoc(userDocRef, defaultProfile, { merge: true }); 
-            setUserProfile(defaultProfile);
-            console.log("AuthContext: Set default 'viewer' role and 'unclassified' type for new/unprofiled user in context.");
+          try {
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+              setUserProfile(userDocSnap.data() as UserProfile);
+            } else {
+              console.warn(`AuthContext: No profile found in Firestore for user ${currentUser.uid}. This might be expected for new users or if provisioning is pending.`);
+              // Assign a default 'viewer' role and 'unclassified' type if no profile exists
+              const defaultProfile: UserProfile = {
+                uid: currentUser.uid,
+                email: currentUser.email || "unknown",
+                role: 'viewer' as UserRole, 
+                type: 'unclassified' as UserType, 
+                createdAt: serverTimestamp() as any, 
+              };
+              setUserProfile(defaultProfile);
+              console.log("AuthContext: Set default 'viewer' role and 'unclassified' type for new/unprofiled user in context.");
+            }
+          } catch (error: any) {
+            const errorMessage = error.message || String(error);
+            console.error(`AuthContext: Error fetching user profile for ${currentUser.uid} from Firestore: ${errorMessage}. This could be a Firebase Security Rules issue (e.g., 'Missing or insufficient permissions').`, error);
+            // Set a minimal profile or null, and potentially guide user
+             const minimalProfile: UserProfile = {
+                uid: currentUser.uid,
+                email: currentUser.email || "unknown",
+                role: 'none' as UserRole, // Indicate an issue with role/profile fetching
+                type: 'unclassified' as UserType,
+                createdAt: serverTimestamp() as any,
+              };
+            setUserProfile(minimalProfile); // Or null if preferred
           }
         } else {
           setUser(null);
@@ -71,10 +80,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     setLoading(true);
     try {
-      await signOut(auth);
+      if (auth) {
+        await signOut(auth);
+      } else {
+        console.warn("AuthContext: Attempted logout, but Firebase auth object is uninitialized.");
+      }
       setUser(null);
       setUserProfile(null); // Clear user profile on logout
-      router.push('/admin/login');
+      router.push('/admin/login'); // Or your preferred logout destination
     } catch (error) {
       console.error("Error signing out: ", error);
     } finally {

@@ -87,8 +87,9 @@ const generateIllustrationFlow = ai.defineFlow(
       }
       console.log(`generateIllustrationFlow: Cache miss for prompt "${input.prompt}" (key: ${promptKey}). Generating new image.`);
     } catch (e: any) {
-      console.error(`generateIllustrationFlow: Error checking Firestore cache for promptKey "${promptKey}":`, e.message);
-      // Continue to generation even if Firestore check fails
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error(`generateIllustrationFlow: Error checking Firestore cache for promptKey "${promptKey}": ${errorMessage}. This could be a permissions issue with the Admin SDK service account if the error indicates "Missing or insufficient permissions".`, e);
+      // Continue to generation even if Firestore check fails, but log the error
     }
 
     let generatedDataUri: string | null = null;
@@ -140,6 +141,8 @@ const generateIllustrationFlow = ai.defineFlow(
         genError = `Image generation blocked by OpenAI's safety policy. Original: ${originalError.substring(0,150)}`;
       } else if (originalError.toLowerCase().includes('plugin is not a function')) {
         genError = `Genkit plugin error: "plugin is not a function". Check Genkit setup and OpenAI plugin. Original: ${originalError.substring(0,150)}`;
+      } else if (originalError.toLowerCase().includes('permission') || originalError.toLowerCase().includes('denied')) {
+        genError = `AI generation failed due to permissions with the AI provider. Original: ${originalError.substring(0,150)}`;
       }
        else {
         genError = `OpenAI/DALL-E generation failed: ${originalError.substring(0,150)}`;
@@ -168,10 +171,12 @@ const generateIllustrationFlow = ai.defineFlow(
 
       await file.save(imageBuffer, {
         metadata: { contentType: mimeType },
-        public: true,
+        public: true, // Make file public for direct URL access
       });
       
-      const publicUrl = file.publicUrl();
+      // Ensure file is public (some SDK versions might require explicit marking)
+      await file.makePublic();
+      const publicUrl = file.publicUrl(); // Get the public URL
 
       const mediaItem: MediaItem = {
         prompt: input.prompt,
@@ -188,8 +193,13 @@ const generateIllustrationFlow = ai.defineFlow(
       return { imageUrl: publicUrl, provider: genProvider, cached: false };
 
     } catch (e: any) {
-      console.error(`generateIllustrationFlow: Error during upload to Storage or saving to Firestore for promptKey "${promptKey}":`, e.message);
-      return { imageUrl: generatedDataUri, error: `Failed to store generated image for caching: ${e.message.substring(0,150)}. Displaying non-cached version.`, provider: genProvider, cached: false };
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      let storageOrFirestoreError = `Failed to store generated image for caching: ${errorMessage.substring(0,150)}.`;
+      if (errorMessage.toLowerCase().includes('permission') || errorMessage.toLowerCase().includes('denied')) {
+        storageOrFirestoreError += " This often indicates the Admin SDK service account lacks Storage Admin or Firestore (Datastore User) IAM permissions.";
+      }
+      console.error(`generateIllustrationFlow: Error during upload to Storage or saving to Firestore for promptKey "${promptKey}": ${errorMessage}`, e);
+      return { imageUrl: generatedDataUri, error: storageOrFirestoreError, provider: genProvider, cached: false };
     }
   }
 );
@@ -243,6 +253,8 @@ async function directGenerate(prompt: string): Promise<GenerateIllustrationOutpu
       genError = `Image generation blocked by OpenAI's safety policy. Original: ${originalError.substring(0,150)}`;
     } else if (originalError.toLowerCase().includes('plugin is not a function')) {
         genError = `Genkit plugin error: "plugin is not a function". Check Genkit setup and OpenAI plugin. Original: ${originalError.substring(0,150)}`;
+    } else if (originalError.toLowerCase().includes('permission') || originalError.toLowerCase().includes('denied')) {
+        genError = `AI generation failed due to permissions with the AI provider (direct). Original: ${originalError.substring(0,150)}`;
     }
     else {
       genError = `OpenAI/DALL-E generation failed (direct): ${originalError.substring(0,150)}`;
