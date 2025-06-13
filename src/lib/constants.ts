@@ -1,5 +1,6 @@
 
-import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home, LayoutDashboard, Users2, Building2, ImageUp, UserCircle, LogIn, LogOut } from 'lucide-react';
+
+import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home, LayoutDashboard, Users2, Building2, ImageUp, UserCircle, LogIn, LogOut, ImageIcon } from 'lucide-react';
 import type React from 'react';
 
 export type NavLink = {
@@ -276,7 +277,8 @@ export const adminNavLinks: NavLink[] = [
   { href: '/admin/professionals', label: 'Professionals', icon: Briefcase },
   { href: '/admin/organizations', label: 'Organizations', icon: Building2 },
   { href: '/admin/donors', label: 'Donors', icon: Heart },
-  { href: '/admin/image-regeneration', label: 'Image Regeneration', icon: ImageUp },
+  { href: '/admin/pregenerated-images', label: 'Manage Images', icon: ImageIcon },
+  { href: '/admin/image-regeneration', label: 'Force Regenerate', icon: ImageUp },
 ];
 
 
