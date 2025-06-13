@@ -3,14 +3,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Briefcase, Heart, Building } from 'lucide-react';
+import { Users, Presentation, Heart, Building2 } from 'lucide-react'; // Updated Building to Presentation, Briefcase to Building2
 import SectionTitle from '@/components/shared/SectionTitle';
 import AiImage from '@/components/shared/AiImage';
 
 const pillars = [
   { name: 'Students', icon: Users, color: 'text-blue-500', description: 'Connect with mentors, find projects, and access resources to kickstart your career.' },
-  { name: 'Professionals', icon: Building, color: 'text-green-500', description: 'Share your expertise, mentor aspiring talents, and give back to the community.' },
-  { name: 'Organizations', icon: Briefcase, color: 'text-purple-500', description: 'Post projects, find skilled students for internships, and collaborate on impactful initiatives.' },
+  { name: 'Professionals', icon: Presentation, color: 'text-green-500', description: 'Share your expertise, mentor aspiring talents, and give back to the community.' },
+  { name: 'Organizations', icon: Building2, color: 'text-purple-500', description: 'Post projects, find skilled students for internships, and collaborate on impactful initiatives.' },
   { name: 'Donors', icon: Heart, color: 'text-red-500', description: 'Support our mission to empower individuals and build a stronger future for all.' },
 ];
 

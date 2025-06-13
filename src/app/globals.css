@@ -13,7 +13,7 @@ h1, h2, h3, h4, h5, h6 {
 
 @layer base {
   :root {
-    --background: 220 20% 97%; /* Very Light Blue-Gray, e.g., #f5f7f9 */
+    --background: 0 0% 98%; /* Light Gray (#F9F9F9) */
     --foreground: 210 10% 23%; /* Dark Gray-Blue for text, e.g., #313a42 */
 
     --card: 0 0% 100%; /* White */
@@ -22,7 +22,7 @@ h1, h2, h3, h4, h5, h6 {
     --popover: 0 0% 100%; /* White */
     --popover-foreground: 210 10% 23%; /* Dark Gray-Blue */
 
-    --primary: 210 89% 40%; /* LinkedIn Blue, e.g., #0A66C2 */
+    --primary: 210 89% 40%; /* Deep Blue (#0A74DA), using existing similar value #0A66C2 */
     --primary-foreground: 0 0% 100%; /* White */
 
     --secondary: 210 25% 94%; /* Lighter Gray-Blue, e.g., #eef1f5 */
@@ -31,8 +31,8 @@ h1, h2, h3, h4, h5, h6 {
     --muted: 210 25% 94%; /* Same as secondary */
     --muted-foreground: 210 10% 45%; /* Medium Gray-Blue, e.g., #66707a */
 
-    --accent: 200 80% 50%; /* A slightly lighter, vibrant blue for accents */
-    --accent-foreground: 0 0% 100%; /* White */
+    --accent: 265 53% 48%; /* Purple (#6A3CBC) */
+    --accent-foreground: 0 0% 100%; /* White text on purple accent */
 
     --destructive: 0 75% 50%; /* Standard Red */
     --destructive-foreground: 0 0% 98%; /* Light Foreground for destructive */
@@ -45,17 +45,17 @@ h1, h2, h3, h4, h5, h6 {
 
     /* Chart colors adjusted to new theme */
     --chart-1: 210 89% 40%; /* Primary Blue */
-    --chart-2: 200 80% 50%; /* Accent Blue */
+    --chart-2: 265 53% 48%; /* Accent Purple */
     --chart-3: 210 70% 60%; /* Lighter/Muted Primary Blue */
-    --chart-4: 200 60% 70%; /* Lighter/Muted Accent Blue */
+    --chart-4: 265 40% 60%; /* Lighter/Muted Accent Purple */
     --chart-5: 210 10% 50%;   /* Neutral Gray-Blue */
 
     /* Sidebar colors aligned with main theme */
-    --sidebar-background: 220 20% 97%;
+    --sidebar-background: 0 0% 98%; /* Light Gray */
     --sidebar-foreground: 210 10% 23%;
     --sidebar-primary: 210 89% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 200 80% 50%;
+    --sidebar-accent: 265 53% 48%; /* Purple */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 210 20% 88%;
     --sidebar-ring: 210 89% 50%;
@@ -80,7 +80,7 @@ h1, h2, h3, h4, h5, h6 {
     --muted: 210 10% 22%;
     --muted-foreground: 210 10% 60%; /* Lighter Muted Gray-Blue */
 
-    --accent: 200 85% 60%; /* Brighter Accent Blue for dark mode */
+    --accent: 265 65% 68%; /* Lighter Purple for dark mode accent */
     --accent-foreground: 0 0% 100%; /* White text on accent */
 
     --destructive: 0 70% 55%; /* Lighter Red for dark mode */
@@ -92,14 +92,14 @@ h1, h2, h3, h4, h5, h6 {
 
     /* Chart colors for dark mode */
     --chart-1: 210 90% 55%;
-    --chart-2: 200 85% 60%;
+    --chart-2: 265 65% 68%; /* Lighter Purple */
     
     /* Sidebar colors for dark mode */
     --sidebar-background: 210 10% 18%; /* Consistent with card background */
     --sidebar-foreground: 210 15% 90%;
     --sidebar-primary: 210 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 200 85% 60%;
+    --sidebar-accent: 265 65% 68%; /* Lighter Purple */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 210 10% 30%;
     --sidebar-ring: 210 90% 55%;
