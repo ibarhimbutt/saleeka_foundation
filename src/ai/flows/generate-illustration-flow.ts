@@ -28,7 +28,7 @@ if (!admin.apps.length) {
 const db = admin.apps.length ? admin.firestore() : null;
 const storageBucket = admin.apps.length ? admin.storage().bucket() : null;
 
-const OPENAI_IMAGE_MODEL = 'dall-e-3'; // CHANGED from 'openai/dall-e-3'
+const OPENAI_IMAGE_MODEL = 'dall-e-3';
 const MEDIA_COLLECTION_NAME = 'media';
 const ILLUSTRATION_STORAGE_PATH = 'illustrations/cache';
 
@@ -97,6 +97,14 @@ const generateIllustrationFlow = ai.defineFlow(
     let genError: string | undefined;
 
     try {
+      // Diagnostic: Log available models to the 'ai' instance in this flow's scope
+      try {
+        const availableModels = ai.listModels();
+        console.log(`generateIllustrationFlow: Models available to 'ai' instance before generation call:`, availableModels.map((m: any) => m.name).join(', ') || 'NONE LISTED');
+      } catch (listModelsError: any) {
+        console.error(`generateIllustrationFlow: Error trying to list models from 'ai' instance:`, listModelsError.message || String(listModelsError));
+      }
+
       console.log(`generateIllustrationFlow: Attempting AI generation (model: ${OPENAI_IMAGE_MODEL}) for prompt: "${input.prompt.substring(0, 50)}..."`);
       const generationResult = await ai.generate({
         model: OPENAI_IMAGE_MODEL,
@@ -214,7 +222,15 @@ async function directGenerate(prompt: string): Promise<GenerateIllustrationOutpu
   let generatedDataUri: string | null = null;
   let genProvider: string | undefined;
 
-  try {
+   try {
+      // Diagnostic: Log available models to the 'ai' instance in this flow's scope
+      try {
+        const availableModels = ai.listModels();
+        console.log(`directGenerate: Models available to 'ai' instance before generation call:`, availableModels.map((m: any) => m.name).join(', ') || 'NONE LISTED');
+      } catch (listModelsError: any) {
+        console.error(`directGenerate: Error trying to list models from 'ai' instance:`, listModelsError.message || String(listModelsError));
+      }
+
     const generationResult = await ai.generate({
       model: OPENAI_IMAGE_MODEL,
       prompt: `A highly detailed, vibrant, and professional illustration suitable for a website. Ensure the style is modern and appealing. Prompt: ${prompt}`,
