@@ -122,14 +122,14 @@ export const sampleTeamMembers: TeamMember[] = [
   },
   {
     id: '2',
-    name: 'Iffat Shaheen',
+    name: 'Estre D'Mentore',
     role: 'Head of Programs',
     bio: 'Dedicated to creating impactful programs that bridge the gap between education and industry.',
     imageUrl: 'https://placehold.co/300x300.png',
   },
   {
     id: '3',
-    name: 'Taaha Najam',
+    name: 'Steve Black',
     role: 'Community Manager',
     bio: 'Focused on building a vibrant and supportive community for all Saleeka members.',
     imageUrl: 'https://placehold.co/300x300.png',
