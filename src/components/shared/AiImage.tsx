@@ -4,7 +4,6 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { generateIllustration, type GenerateIllustrationInput, type GenerateIllustrationOutput } from '@/ai/flows/generate-illustration-flow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
 import { cn, sanitizePromptForClientCacheKey } from '@/lib/utils';
@@ -50,7 +49,7 @@ const AiImage: React.FC<AiImageProps> = ({
     const cacheKey = `ai-image-url-cache::${sanitizedPromptKey}`;
     console.log(`AiImage (${alt}): Using cacheKey: "${cacheKey}"`);
 
-    const generateOrFetchUrl = async () => {
+    const fetchAndSetImageUrl = async () => {
       try {
         const cachedUrl = localStorage.getItem(cacheKey);
         if (cachedUrl && isEffectMounted) {
@@ -66,16 +65,21 @@ const AiImage: React.FC<AiImageProps> = ({
 
       setIsLoading(true);
       setError(null);
-      console.log(`AiImage (${alt}): Calling generateIllustration flow for prompt: "${prompt}"`);
+      console.log(`AiImage (${alt}): Calling /api/generate-image for prompt: "${prompt}"`);
 
       try {
-        const input: GenerateIllustrationInput = { prompt: prompt };
-        const result: GenerateIllustrationOutput = await generateIllustration(input);
-        console.log(`AiImage (${alt}): Flow result for prompt "${prompt}":`, JSON.stringify(result));
+        const response = await fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
+
+        const result = await response.json();
+        console.log(`AiImage (${alt}): API response for prompt "${prompt}":`, JSON.stringify(result));
 
         if (isEffectMounted) {
-          if (result.imageUrl) {
-            console.log(`AiImage (${alt}): Flow success. Image URL: ${result.imageUrl.substring(0,60)}...`);
+          if (response.ok && result.imageUrl) {
+            console.log(`AiImage (${alt}): API success. Image URL: ${result.imageUrl.substring(0, 60)}...`);
             setImageUrlToDisplay(result.imageUrl);
             try {
               localStorage.setItem(cacheKey, result.imageUrl);
@@ -84,19 +88,18 @@ const AiImage: React.FC<AiImageProps> = ({
               console.warn(`AiImage (${alt}): Failed to write image URL to localStorage for key "${cacheKey}":`, e);
             }
           } else {
-            const flowError = result.error || "Image generation flow returned no image URL and no specific error.";
-            console.error(`AiImage (${alt}): Flow returned no imageUrl. Error: "${flowError}". Prompt: "${prompt}"`);
-            setError(flowError); // Display more specific error
-            // Additional logging based on error content was already in the flow.
+            const apiError = result.error || "Image generation API returned no image URL and no specific error.";
+            console.error(`AiImage (${alt}): API returned error or no imageUrl. Error: "${apiError}". Prompt: "${prompt}"`);
+            setError(apiError);
           }
         } else {
-          console.log(`AiImage (${alt}): Effect unmounted before flow result could be processed.`);
+          console.log(`AiImage (${alt}): Effect unmounted before API result could be processed.`);
         }
       } catch (e: any) {
         const errorMessage = e instanceof Error ? e.message : String(e);
-        console.error(`AiImage (${alt}): CRITICAL - Unexpected error calling generateIllustration flow for prompt "${prompt}":`, errorMessage, e);
+        console.error(`AiImage (${alt}): CRITICAL - Unexpected error calling /api/generate-image for prompt "${prompt}":`, errorMessage, e);
         if (isEffectMounted) {
-          setError(`Service communication error: ${errorMessage.substring(0,100)}...`);
+          setError(`Service communication error: ${errorMessage.substring(0, 100)}...`);
         }
       } finally {
         if (isEffectMounted) {
@@ -106,7 +109,7 @@ const AiImage: React.FC<AiImageProps> = ({
     };
 
     if (prompt && prompt.trim() !== "") {
-      generateOrFetchUrl();
+      fetchAndSetImageUrl();
     } else {
       console.log(`AiImage (${alt}): No prompt provided or prompt is empty. Using fallback: ${fallbackImageUrl}`);
       setIsLoading(false);
@@ -121,10 +124,9 @@ const AiImage: React.FC<AiImageProps> = ({
       console.log(`AiImage (${alt}): Effect cleanup. Prompt: "${prompt}"`);
       isEffectMounted = false;
     };
-  }, [prompt, isMounted, alt]); // Added alt to dep array as it's used in logs
+  }, [prompt, isMounted, alt]);
 
   if (!isMounted) {
-    // Render skeleton or null on the server or before hydration to avoid mismatches
     return (
       <Skeleton
         className={cn("bg-muted/30", className)}
@@ -146,7 +148,6 @@ const AiImage: React.FC<AiImageProps> = ({
 
   const finalSrc = error ? fallbackImageUrl : (imageUrlToDisplay || fallbackImageUrl);
   console.log(`AiImage (${alt}): Determining finalSrc. Error: "${error}", imageUrlToDisplay: "${imageUrlToDisplay ? imageUrlToDisplay.substring(0,60)+'...' : null}", fallbackImageUrl: "${fallbackImageUrl ? fallbackImageUrl.substring(0,60)+'...' : null}". FinalSrc: "${finalSrc ? finalSrc.substring(0,60)+'...' : null}"`);
-
 
   if (!finalSrc) {
      console.error(`AiImage (${alt}): No finalSrc determined. Error was: "${error}". Fallback was: "${fallbackImageUrl}"`);
@@ -174,15 +175,14 @@ const AiImage: React.FC<AiImageProps> = ({
       height={height}
       className={cn(className, imageClassName)}
       data-ai-source={error ? "error-or-fallback" : (imageUrlToDisplay === fallbackImageUrl && !imageUrlToDisplay?.startsWith('data:') ? "fallback-direct" : (imageUrlToDisplay ? "ai-generated-or-cached" : "fallback-implicit"))}
-      unoptimized={finalSrc.startsWith('data:')} // Important for data URIs
+      unoptimized={finalSrc.startsWith('data:')}
       onError={(e) => {
-        // Type assertion for the event target
         const target = e.target as HTMLImageElement;
         console.warn(`AiImage (${alt}): Next/Image onError event. Current src: "${target.src.substring(0,60)}...". Original prompt: "${prompt}". Error state: "${error}"`);
         if (isMounted && finalSrc !== fallbackImageUrl && fallbackImageUrl) {
             console.warn(`AiImage (${alt}): Next/Image failed to load src: "${finalSrc.substring(0,60)}...". Attempting fallback: "${fallbackImageUrl.substring(0,60)}..." for prompt: "${prompt}".`);
             setError("Image source failed to load, using fallback.");
-            setImageUrlToDisplay(null); // Force re-evaluation of finalSrc to fallback
+            setImageUrlToDisplay(null); 
         } else if (isMounted && finalSrc === fallbackImageUrl && fallbackImageUrl) {
             console.error(`AiImage (${alt}): Fallback image also failed to load for prompt "${prompt}": ${fallbackImageUrl.substring(0,60)}...`);
             setError("Fallback image also failed to load.");
@@ -196,4 +196,3 @@ const AiImage: React.FC<AiImageProps> = ({
 };
 
 export default AiImage;
-
