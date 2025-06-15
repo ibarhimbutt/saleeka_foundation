@@ -152,7 +152,7 @@ const generateIllustrationFlow = ai.defineFlow(
       } else if (originalError.toLowerCase().includes('permission') || originalError.toLowerCase().includes('denied')) {
         genError = `AI generation failed due to permissions with the AI provider (${OPENAI_IMAGE_MODEL}). Original: ${originalError.substring(0,150)}`;
       } else if (originalError.toLowerCase().includes('not found') && originalError.toLowerCase().includes('model')) {
-        genError = `AI model (${OPENAI_IMAGE_MODEL}) not found. Check model name or API key access. Original: ${originalError.substring(0,150)}`;
+        genError = `AI model (${OPENAI_IMAGE_MODEL}) not found. Check API key access and **see server logs for 'ai.listModels()' output** to verify model availability. Original: ${originalError.substring(0,100)}`;
       }
        else {
         genError = `AI model (${OPENAI_IMAGE_MODEL}) generation failed: ${originalError.substring(0,150)}`;
@@ -282,7 +282,7 @@ async function directGenerate(prompt: string): Promise<GenerateIllustrationOutpu
     } else if (originalError.toLowerCase().includes('permission') || originalError.toLowerCase().includes('denied')) {
         genError = `AI generation failed due to permissions with the AI provider (${modelContext}) (direct). Original: ${originalError.substring(0,150)}`;
     } else if (originalError.toLowerCase().includes('not found') && originalError.toLowerCase().includes('model')) {
-        genError = `AI model (${modelContext}) not found. Check model name or API key access. Original: ${originalError.substring(0,150)}`;
+        genError = `AI model (${modelContext}) not found. Check API key access and **see server logs for 'ai.listModels()' output** to verify model availability. Original: ${originalError.substring(0,100)}`;
     } else {
       genError = `AI model (${modelContext}) generation failed (direct): ${originalError.substring(0,150)}`;
     }
