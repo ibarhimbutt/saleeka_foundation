@@ -29,7 +29,7 @@ export type Program = {
   image?: string; // URL to image in Firebase Storage or placeholder
   tags?: string[];
   // Firestore timestamps will be handled by server-side logic if needed
-  // createdAt?: Timestamp; 
+  // createdAt?: Timestamp;
   // updatedAt?: Timestamp;
 };
 
@@ -120,7 +120,7 @@ export const sampleTeamMembers: TeamMember[] = [
   },
   {
     id: '2',
-    name: 'Estre D'Mentore',
+    name: 'Estre D\\\'Mentore',
     role: 'Head of Programs',
     bio: 'Dedicated to creating impactful programs that bridge the gap between education and industry.',
     imageUrl: 'https://placehold.co/300x300.png',
