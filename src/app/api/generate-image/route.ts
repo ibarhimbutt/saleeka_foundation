@@ -4,42 +4,67 @@ import OpenAI from 'openai';
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { MediaItem } from '@/lib/firestoreTypes';
-import { sanitizePromptForClientCacheKey } from '@/lib/utils'; // Using the same sanitizer for consistency
-import fetch from 'node-fetch'; // For downloading image from OpenAI URL
+import { sanitizePromptForClientCacheKey } from '@/lib/utils';
+import fetch from 'node-fetch';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
   try {
-    // Check for explicit service account path or rely on default credentials
+    const adminConfigOptions: admin.AppOptions = {};
+
+    // Use explicit GOOGLE_APPLICATION_CREDENTIALS if set
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-        // storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET // Ensure this env var is set if needed
-      });
+      adminConfigOptions.credential = admin.credential.applicationDefault();
+      console.log("api/generate-image: Using GOOGLE_APPLICATION_CREDENTIALS for Admin SDK.");
     } else {
-      admin.initializeApp(); // For environments with auto-configured Admin SDK (e.g., Cloud Functions, App Engine)
+      console.log("api/generate-image: GOOGLE_APPLICATION_CREDENTIALS not set. Relying on Application Default Credentials or other auto-configuration.");
     }
-    console.log("api/generate-image: Firebase Admin SDK initialized.");
+
+    // Explicitly set projectId and storageBucket if available from env vars
+    // These should match your client-side Firebase config for consistency.
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+    if (projectId) {
+      adminConfigOptions.projectId = projectId;
+    } else {
+      console.warn("api/generate-image: NEXT_PUBLIC_FIREBASE_PROJECT_ID environment variable is not set. Admin SDK might have issues inferring project ID.");
+    }
+
+    if (storageBucket) {
+      adminConfigOptions.storageBucket = storageBucket;
+    } else {
+      console.warn("api/generate-image: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET environment variable is not set. Admin SDK might have issues inferring storage bucket.");
+    }
+    
+    admin.initializeApp(adminConfigOptions);
+    console.log("api/generate-image: Firebase Admin SDK initialized (or attempted).");
+    if (admin.apps.length) {
+        console.log(`api/generate-image: Admin SDK for project ${admin.app().options.projectId} initialized.`);
+    } else {
+        console.error("api/generate-image: Firebase Admin SDK initializeApp was called, but admin.apps is still empty. This indicates a critical failure in initialization.");
+    }
+
   } catch (e: any) {
-    console.error("api/generate-image: Firebase Admin SDK failed to initialize. Error:", e.message);
-    // If Admin SDK fails, the route might not function correctly for storage/firestore operations.
+    console.error("api/generate-image: Firebase Admin SDK CRITICAL FAILURE during initializeApp. Error:", e.message, e.stack);
   }
 }
 
 const db = admin.apps.length ? admin.firestore() : null;
-const storageBucket = admin.apps.length ? admin.storage().bucket() : null;
+const storage = admin.apps.length ? admin.storage() : null; // Get storage service
+const defaultBucket = storage ? storage.bucket() : null; // Get default bucket from storage service
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 const MEDIA_COLLECTION_NAME = 'media';
-const ILLUSTRATION_STORAGE_PATH = 'illustrations/cache'; // Firebase Storage path
+const ILLUSTRATION_STORAGE_PATH = 'illustrations/cache';
 
 export async function POST(req: NextRequest) {
-  if (!db || !storageBucket) {
-    console.error("api/generate-image: Firestore or Storage not available due to Admin SDK init failure.");
-    return NextResponse.json({ error: "Server configuration error for Firebase." }, { status: 500 });
+  if (!db || !defaultBucket) {
+    console.error("api/generate-image: Firestore or Storage Bucket not available. This is likely due to Firebase Admin SDK initialization failure. Check server logs for details about 'admin.initializeApp'. Ensure GOOGLE_APPLICATION_CREDENTIALS is set correctly for local dev or that the runtime service account has permissions.");
+    return NextResponse.json({ error: "Server configuration error for Firebase. Admin SDK services not available." }, { status: 500 });
   }
 
   const { prompt } = await req.json();
@@ -51,7 +76,6 @@ export async function POST(req: NextRequest) {
   const promptKey = sanitizePromptForClientCacheKey(prompt);
 
   try {
-    // 1. Check Firestore Cache
     const mediaDocRef = db.collection(MEDIA_COLLECTION_NAME).doc(promptKey);
     const mediaDocSnap = await mediaDocRef.get();
 
@@ -64,13 +88,12 @@ export async function POST(req: NextRequest) {
     }
     console.log(`api/generate-image: Cache miss for promptKey "${promptKey}". Generating new image.`);
 
-    // 2. Generate Image with OpenAI
     const aiResponse = await openai.images.generate({
       model: "dall-e-3",
       prompt: `A highly detailed, vibrant, and professional illustration suitable for a website. Ensure the style is modern and appealing. Prompt: ${prompt}`,
       n: 1,
-      size: "1024x1024", // DALL-E 3 standard size
-      response_format: "url", // DALL-E 3 returns a URL by default
+      size: "1024x1024",
+      response_format: "url",
     });
 
     const openAiImageUrl = aiResponse.data[0]?.url;
@@ -81,7 +104,6 @@ export async function POST(req: NextRequest) {
     }
     console.log(`api/generate-image: OpenAI generated image URL: ${openAiImageUrl.substring(0, 100)}...`);
 
-    // 3. Download image from OpenAI's URL
     const imageResponse = await fetch(openAiImageUrl);
     if (!imageResponse.ok) {
         const errorText = await imageResponse.text();
@@ -91,26 +113,23 @@ export async function POST(req: NextRequest) {
     const mimeType = imageResponse.headers.get('content-type') || 'image/png';
     const fileExtension = mimeType.split('/')[1] || 'png';
 
-    // 4. Upload to Firebase Storage
     const fileName = `${promptKey}-${Date.now()}.${fileExtension}`;
     const filePath = `${ILLUSTRATION_STORAGE_PATH}/${fileName}`;
-    const file = storageBucket.file(filePath);
+    const file = defaultBucket.file(filePath); // Use the defaultBucket obtained earlier
 
     await file.save(imageBuffer, {
       metadata: { contentType: mimeType },
-      public: true, // Make file public for direct URL access
+      public: true,
     });
-    // Ensure file is public (some SDK versions might require explicit marking)
     await file.makePublic(); 
     const publicUrl = file.publicUrl();
     console.log(`api/generate-image: Uploaded to Firebase Storage. Public URL: ${publicUrl.substring(0,60)}...`);
 
-    // 5. Save to Firestore Cache
     const mediaItem: MediaItem = {
       prompt: prompt,
       promptKey: promptKey,
       imageUrl: publicUrl,
-      provider: 'openai_dall-e-3', // Indicate source
+      provider: 'openai_dall-e-3',
       createdAt: FieldValue.serverTimestamp() as admin.firestore.Timestamp,
       imageSizeBytes: imageBuffer.length,
       mimeType,
@@ -121,13 +140,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ imageUrl: publicUrl, cached: false });
 
   } catch (error: any) {
-    console.error(`api/generate-image: Error processing prompt "${prompt}":`, error.message || String(error));
+    console.error(`api/generate-image: Error processing prompt "${prompt}":`, error.message || String(error), error.stack);
     let userErrorMessage = "Image generation failed.";
     if (error.message && error.message.toLowerCase().includes('billing')) {
         userErrorMessage = "Image generation failed due to a billing issue with the AI provider.";
     } else if (error.message && error.message.toLowerCase().includes('quota')) {
         userErrorMessage = "Image generation failed due to quota limits with the AI provider.";
-    } else if (error.message && error.message.toLowerCase().includes('safety') || error.message.toLowerCase().includes('policy')) {
+    } else if (error.message && (error.message.toLowerCase().includes('safety') || error.message.toLowerCase().includes('policy'))) {
         userErrorMessage = "Image generation blocked by AI safety policy.";
     }
     return NextResponse.json({ error: userErrorMessage, details: error.message }, { status: 500 });
