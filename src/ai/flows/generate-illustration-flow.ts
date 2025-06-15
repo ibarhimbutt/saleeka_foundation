@@ -28,7 +28,7 @@ if (!admin.apps.length) {
 const db = admin.apps.length ? admin.firestore() : null;
 const storageBucket = admin.apps.length ? admin.storage().bucket() : null;
 
-const OPENAI_IMAGE_MODEL = 'openai/dall-e-3'; // Using DALL-E 3
+const OPENAI_IMAGE_MODEL = 'dall-e-3'; // CHANGED from 'openai/dall-e-3'
 const MEDIA_COLLECTION_NAME = 'media';
 const ILLUSTRATION_STORAGE_PATH = 'illustrations/cache';
 
@@ -68,7 +68,7 @@ const generateIllustrationFlow = ai.defineFlow(
   },
   async (input): Promise<GenerateIllustrationOutput> => {
     if (!db || !storageBucket) {
-        console.warn("generateIllustrationFlow: Firebase Admin SDK (Firestore or Storage) not available. Proceeding with direct generation without caching for prompt:", input.prompt);
+        console.warn(`generateIllustrationFlow: Firebase Admin SDK (Firestore or Storage) not available. Proceeding with direct generation (model: ${OPENAI_IMAGE_MODEL}) without caching for prompt:`, input.prompt.substring(0, 50) + "...");
         return directGenerate(input.prompt);
     }
 
@@ -81,11 +81,11 @@ const generateIllustrationFlow = ai.defineFlow(
       if (mediaDocSnap.exists) {
         const cachedMedia = mediaDocSnap.data() as MediaItem;
         if (cachedMedia.imageUrl) {
-          console.log(`generateIllustrationFlow: Cache hit for prompt "${input.prompt}" (key: ${promptKey}). URL: ${cachedMedia.imageUrl}`);
+          console.log(`generateIllustrationFlow: Cache hit for prompt "${input.prompt.substring(0, 50)}..." (key: ${promptKey}). URL: ${cachedMedia.imageUrl.substring(0,60)}...`);
           return { imageUrl: cachedMedia.imageUrl, provider: cachedMedia.provider || 'cache-firestore', cached: true };
         }
       }
-      console.log(`generateIllustrationFlow: Cache miss for prompt "${input.prompt}" (key: ${promptKey}). Generating new image.`);
+      console.log(`generateIllustrationFlow: Cache miss for prompt "${input.prompt.substring(0, 50)}..." (key: ${promptKey}). Generating new image with model: ${OPENAI_IMAGE_MODEL}.`);
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : String(e);
       console.error(`generateIllustrationFlow: Error checking Firestore cache for promptKey "${promptKey}": ${errorMessage}. This could be a permissions issue with the Admin SDK service account if the error indicates "Missing or insufficient permissions".`, e);
@@ -97,60 +97,62 @@ const generateIllustrationFlow = ai.defineFlow(
     let genError: string | undefined;
 
     try {
-      console.log(`generateIllustrationFlow: Attempting OpenAI DALL-E (${OPENAI_IMAGE_MODEL}) for prompt: "${input.prompt}"`);
+      console.log(`generateIllustrationFlow: Attempting AI generation (model: ${OPENAI_IMAGE_MODEL}) for prompt: "${input.prompt.substring(0, 50)}..."`);
       const generationResult = await ai.generate({
-        model: OPENAI_IMAGE_MODEL, 
+        model: OPENAI_IMAGE_MODEL,
         prompt: `A highly detailed, vibrant, and professional illustration suitable for a website. Ensure the style is modern and appealing. Prompt: ${input.prompt}`,
       });
 
       if (!generationResult || !generationResult.media) {
-        genError = `OpenAI/DALL-E returned no result or no media object. GenerationResult: ${JSON.stringify(generationResult)}`;
-        console.warn(`generateIllustrationFlow (OpenAI): Image generation for prompt "${input.prompt}" returned no media. Result:`, generationResult);
+        genError = `AI model (${OPENAI_IMAGE_MODEL}) returned no result or no media object. GenerationResult: ${JSON.stringify(generationResult)}`;
+        console.warn(`generateIllustrationFlow (${OPENAI_IMAGE_MODEL}): Image generation for prompt "${input.prompt.substring(0, 50)}..." returned no media. Result:`, generationResult);
       } else if (generationResult.media && generationResult.media.url) {
         const mediaUrl = generationResult.media.url;
-        console.log(`generateIllustrationFlow (OpenAI): Received media URL: ${mediaUrl.substring(0,100)}...`);
+        console.log(`generateIllustrationFlow (${OPENAI_IMAGE_MODEL}): Received media URL: ${mediaUrl.substring(0,100)}...`);
         if (mediaUrl.startsWith('data:')) {
           generatedDataUri = mediaUrl;
         } else if (mediaUrl.startsWith('http')) {
-          console.log(`generateIllustrationFlow: OpenAI returned URL, downloading: ${mediaUrl}`);
+          console.log(`generateIllustrationFlow: AI model (${OPENAI_IMAGE_MODEL}) returned URL, downloading: ${mediaUrl}`);
           const response = await fetch(mediaUrl);
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Failed to download image from OpenAI URL (${mediaUrl}): ${response.status} ${response.statusText}. Response: ${errorText}`);
+            throw new Error(`Failed to download image from AI model URL (${mediaUrl}): ${response.status} ${response.statusText}. Response: ${errorText}`);
           }
           const imageBuffer = Buffer.from(await response.arrayBuffer());
-          const contentType = response.headers.get('content-type') || 'image/png'; 
+          const contentType = response.headers.get('content-type') || 'image/png';
           generatedDataUri = `data:${contentType};base64,${imageBuffer.toString('base64')}`;
-          console.log(`generateIllustrationFlow: Successfully downloaded and converted image from OpenAI URL. Content-Type: ${contentType}`);
+          console.log(`generateIllustrationFlow: Successfully downloaded and converted image from AI model URL. Content-Type: ${contentType}`);
         } else {
-           throw new Error(`OpenAI returned an unexpected media URL format: ${mediaUrl}`);
+           throw new Error(`AI model (${OPENAI_IMAGE_MODEL}) returned an unexpected media URL format: ${mediaUrl}`);
         }
-        genProvider = 'openai';
+        genProvider = OPENAI_IMAGE_MODEL.startsWith('openai/') || OPENAI_IMAGE_MODEL.includes('dall-e') ? 'openai' : 'unknown-ai';
       } else {
-        genError = `OpenAI/DALL-E returned invalid image data or no media URL. Media object: ${JSON.stringify(generationResult.media)}`;
-        console.warn(`generateIllustrationFlow (OpenAI): Image generation for prompt "${input.prompt}" returned invalid data or no media URL. Media:`, generationResult.media);
+        genError = `AI model (${OPENAI_IMAGE_MODEL}) returned invalid image data or no media URL. Media object: ${JSON.stringify(generationResult.media)}`;
+        console.warn(`generateIllustrationFlow (${OPENAI_IMAGE_MODEL}): Image generation for prompt "${input.prompt.substring(0, 50)}..." returned invalid data or no media URL. Media:`, generationResult.media);
       }
     } catch (e: any) {
       let originalError = e instanceof Error ? e.message : String(e);
-      console.error(`generateIllustrationFlow (OpenAI CRITICAL): Error during AI generation for prompt "${input.prompt}": ${originalError}`, e);
+      console.error(`generateIllustrationFlow (AI CRITICAL - Model: ${OPENAI_IMAGE_MODEL}): Error during AI generation for prompt "${input.prompt.substring(0, 50)}...": ${originalError}`, e);
       if (originalError.includes('429') || originalError.toLowerCase().includes('rate limit') || originalError.toLowerCase().includes('quota')) {
-        genError = `OpenAI API rate limit or quota reached.`;
+        genError = `AI API (${OPENAI_IMAGE_MODEL}) rate limit or quota reached.`;
       } else if (originalError.toLowerCase().includes('billing') || originalError.toLowerCase().includes('credit')) {
-        genError = `OpenAI API billing issue. Please check your account.`;
+        genError = `AI API (${OPENAI_IMAGE_MODEL}) billing issue. Please check your account.`;
       } else if (originalError.toLowerCase().includes('safety') || originalError.toLowerCase().includes('policy')) {
-        genError = `Image generation blocked by OpenAI's safety policy. Original: ${originalError.substring(0,150)}`;
+        genError = `Image generation blocked by AI's (${OPENAI_IMAGE_MODEL}) safety policy. Original: ${originalError.substring(0,150)}`;
       } else if (originalError.toLowerCase().includes('plugin is not a function')) {
-        genError = `Genkit plugin error: "plugin is not a function". Check Genkit setup and OpenAI plugin. Original: ${originalError.substring(0,150)}`;
+        genError = `Genkit plugin error: "plugin is not a function". Check Genkit setup and AI plugin (${OPENAI_IMAGE_MODEL}). Original: ${originalError.substring(0,150)}`;
       } else if (originalError.toLowerCase().includes('permission') || originalError.toLowerCase().includes('denied')) {
-        genError = `AI generation failed due to permissions with the AI provider. Original: ${originalError.substring(0,150)}`;
+        genError = `AI generation failed due to permissions with the AI provider (${OPENAI_IMAGE_MODEL}). Original: ${originalError.substring(0,150)}`;
+      } else if (originalError.toLowerCase().includes('not found') && originalError.toLowerCase().includes('model')) {
+        genError = `AI model (${OPENAI_IMAGE_MODEL}) not found. Check model name or API key access. Original: ${originalError.substring(0,150)}`;
       }
        else {
-        genError = `OpenAI/DALL-E generation failed: ${originalError.substring(0,150)}`;
+        genError = `AI model (${OPENAI_IMAGE_MODEL}) generation failed: ${originalError.substring(0,150)}`;
       }
     }
 
     if (!generatedDataUri) {
-      console.error(`generateIllustrationFlow: No generatedDataUri after attempting generation for prompt "${input.prompt}". Error: ${genError}`);
+      console.error(`generateIllustrationFlow: No generatedDataUri after attempting generation (model: ${OPENAI_IMAGE_MODEL}) for prompt "${input.prompt.substring(0, 50)}...". Error: ${genError}`);
       return { imageUrl: null, error: genError || "Image generation failed with an unknown error.", provider: genProvider, cached: false };
     }
 
@@ -173,7 +175,7 @@ const generateIllustrationFlow = ai.defineFlow(
         metadata: { contentType: mimeType },
         public: true, // Make file public for direct URL access
       });
-      
+
       // Ensure file is public (some SDK versions might require explicit marking)
       await file.makePublic();
       const publicUrl = file.publicUrl(); // Get the public URL
@@ -188,7 +190,7 @@ const generateIllustrationFlow = ai.defineFlow(
         mimeType,
       };
       await db.collection(MEDIA_COLLECTION_NAME).doc(promptKey).set(mediaItem);
-      console.log(`generateIllustrationFlow: Successfully generated with ${genProvider}, uploaded, and cached image for promptKey "${promptKey}". URL: ${publicUrl}`);
+      console.log(`generateIllustrationFlow: Successfully generated with ${genProvider} (model ${OPENAI_IMAGE_MODEL}), uploaded, and cached image for promptKey "${promptKey}". URL: ${publicUrl.substring(0,60)}...`);
 
       return { imageUrl: publicUrl, provider: genProvider, cached: false };
 
@@ -199,6 +201,8 @@ const generateIllustrationFlow = ai.defineFlow(
         storageOrFirestoreError += " This often indicates the Admin SDK service account lacks Storage Admin or Firestore (Datastore User) IAM permissions.";
       }
       console.error(`generateIllustrationFlow: Error during upload to Storage or saving to Firestore for promptKey "${promptKey}": ${errorMessage}`, e);
+      // Return the generatedDataUri (base64) here because upload/caching failed, but generation might have succeeded.
+      // This allows AiImage to at least display it temporarily if it can handle data URIs directly.
       return { imageUrl: generatedDataUri, error: storageOrFirestoreError, provider: genProvider, cached: false };
     }
   }
@@ -206,61 +210,68 @@ const generateIllustrationFlow = ai.defineFlow(
 
 
 async function directGenerate(prompt: string): Promise<GenerateIllustrationOutput> {
-  console.log(`directGenerate: Attempting OpenAI DALL-E (${OPENAI_IMAGE_MODEL}) for prompt: "${prompt}" (NO CACHING)`);
+  console.log(`directGenerate: Attempting AI generation (model: ${OPENAI_IMAGE_MODEL}) for prompt: "${prompt.substring(0, 50)}..." (NO CACHING)`);
   let generatedDataUri: string | null = null;
+  let genProvider: string | undefined;
 
   try {
     const generationResult = await ai.generate({
       model: OPENAI_IMAGE_MODEL,
       prompt: `A highly detailed, vibrant, and professional illustration suitable for a website. Ensure the style is modern and appealing. Prompt: ${prompt}`,
     });
+     genProvider = OPENAI_IMAGE_MODEL.startsWith('openai/') || OPENAI_IMAGE_MODEL.includes('dall-e') ? 'openai' : 'unknown-ai';
+
 
     if (!generationResult || !generationResult.media) {
-      console.warn(`directGenerate (OpenAI): Image generation for prompt "${prompt}" returned no media. Result:`, generationResult);
-      return { imageUrl: null, error: `OpenAI/DALL-E returned no result or no media object (direct generation). Result: ${JSON.stringify(generationResult)}`, provider: 'openai', cached: false };
+      console.warn(`directGenerate (${OPENAI_IMAGE_MODEL}): Image generation for prompt "${prompt.substring(0, 50)}..." returned no media. Result:`, generationResult);
+      return { imageUrl: null, error: `AI model (${OPENAI_IMAGE_MODEL}) returned no result or no media object (direct generation). Result: ${JSON.stringify(generationResult)}`, provider: genProvider, cached: false };
     } else if (generationResult.media && generationResult.media.url) {
       const mediaUrl = generationResult.media.url;
-      console.log(`directGenerate (OpenAI): Received media URL: ${mediaUrl.substring(0,100)}...`);
+      console.log(`directGenerate (${OPENAI_IMAGE_MODEL}): Received media URL: ${mediaUrl.substring(0,100)}...`);
       if (mediaUrl.startsWith('data:')) {
         generatedDataUri = mediaUrl;
       } else if (mediaUrl.startsWith('http')) {
-        console.log(`directGenerate: OpenAI returned URL, downloading: ${mediaUrl}`);
+        console.log(`directGenerate: AI model (${OPENAI_IMAGE_MODEL}) returned URL, downloading: ${mediaUrl}`);
         const response = await fetch(mediaUrl);
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`Failed to download image from OpenAI URL (${mediaUrl}): ${response.status} ${response.statusText}. Response: ${errorText}`);
+          throw new Error(`Failed to download image from AI model URL (${mediaUrl}): ${response.status} ${response.statusText}. Response: ${errorText}`);
         }
         const imageBuffer = Buffer.from(await response.arrayBuffer());
         const contentType = response.headers.get('content-type') || 'image/png';
         generatedDataUri = `data:${contentType};base64,${imageBuffer.toString('base64')}`;
-        console.log(`directGenerate: Successfully downloaded and converted image from OpenAI URL. Content-Type: ${contentType}`);
+        console.log(`directGenerate: Successfully downloaded and converted image from AI model URL. Content-Type: ${contentType}`);
       } else {
-        throw new Error(`OpenAI returned an unexpected media URL format: ${mediaUrl}`);
+        throw new Error(`AI model (${OPENAI_IMAGE_MODEL}) returned an unexpected media URL format: ${mediaUrl}`);
       }
-      return { imageUrl: generatedDataUri, provider: 'openai', cached: false };
+      return { imageUrl: generatedDataUri, provider: genProvider, cached: false };
     } else {
-       console.warn(`directGenerate (OpenAI): Image generation for prompt "${prompt}" returned invalid data or no media URL. Media:`, generationResult.media);
-      return { imageUrl: null, error: `OpenAI/DALL-E returned invalid image data or no media URL (direct generation). Media object: ${JSON.stringify(generationResult.media)}`, provider: 'openai', cached: false };
+       console.warn(`directGenerate (${OPENAI_IMAGE_MODEL}): Image generation for prompt "${prompt.substring(0, 50)}..." returned invalid data or no media URL. Media:`, generationResult.media);
+      return { imageUrl: null, error: `AI model (${OPENAI_IMAGE_MODEL}) returned invalid image data or no media URL (direct generation). Media object: ${JSON.stringify(generationResult.media)}`, provider: genProvider, cached: false };
     }
   } catch (e: any) {
     let originalError = e instanceof Error ? e.message : String(e);
     let genError;
+    // genProvider might not be set if ai.generate itself throws an error before model identification logic
+    const modelContext = genProvider || OPENAI_IMAGE_MODEL;
+
     if (originalError.includes('429') || originalError.toLowerCase().includes('rate limit') || originalError.toLowerCase().includes('quota')) {
-      genError = `OpenAI API rate limit or quota reached.`;
+      genError = `AI API (${modelContext}) rate limit or quota reached.`;
     } else if (originalError.toLowerCase().includes('billing') || originalError.toLowerCase().includes('credit')) {
-        genError = `OpenAI API billing issue. Please check your account.`;
+        genError = `AI API (${modelContext}) billing issue. Please check your account.`;
     } else if (originalError.toLowerCase().includes('safety') || originalError.toLowerCase().includes('policy')) {
-      genError = `Image generation blocked by OpenAI's safety policy. Original: ${originalError.substring(0,150)}`;
+      genError = `Image generation blocked by AI's (${modelContext}) safety policy. Original: ${originalError.substring(0,150)}`;
     } else if (originalError.toLowerCase().includes('plugin is not a function')) {
-        genError = `Genkit plugin error: "plugin is not a function". Check Genkit setup and OpenAI plugin. Original: ${originalError.substring(0,150)}`;
+        genError = `Genkit plugin error: "plugin is not a function". Check Genkit setup and AI plugin (${modelContext}). Original: ${originalError.substring(0,150)}`;
     } else if (originalError.toLowerCase().includes('permission') || originalError.toLowerCase().includes('denied')) {
-        genError = `AI generation failed due to permissions with the AI provider (direct). Original: ${originalError.substring(0,150)}`;
+        genError = `AI generation failed due to permissions with the AI provider (${modelContext}) (direct). Original: ${originalError.substring(0,150)}`;
+    } else if (originalError.toLowerCase().includes('not found') && originalError.toLowerCase().includes('model')) {
+        genError = `AI model (${modelContext}) not found. Check model name or API key access. Original: ${originalError.substring(0,150)}`;
+    } else {
+      genError = `AI model (${modelContext}) generation failed (direct): ${originalError.substring(0,150)}`;
     }
-    else {
-      genError = `OpenAI/DALL-E generation failed (direct): ${originalError.substring(0,150)}`;
-    }
-    console.error(`directGenerate (OpenAI CRITICAL): Error for prompt "${prompt}": ${originalError}`, e);
-    return { imageUrl: null, error: genError, provider: 'openai', cached: false };
+    console.error(`directGenerate (AI CRITICAL - Model: ${modelContext}): Error for prompt "${prompt.substring(0, 50)}...": ${originalError}`, e);
+    return { imageUrl: null, error: genError, provider: genProvider, cached: false };
   }
 }
 
