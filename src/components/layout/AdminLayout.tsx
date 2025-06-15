@@ -62,18 +62,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <div className="flex h-full flex-col p-4">
             <Link href="/admin" className="mb-6 flex items-center gap-2 px-2">
               <Image
-                src="https://placehold.co/100x50.png"
+                src="/saleeka-logo.png" // Using static logo
                 alt="Saleeka Admin Logo"
-                width={100}
-                height={50}
-                data-ai-hint="Saleeka logo text"
+                width={100} // Adjust as needed
+                height={34} // Adjust as needed
                 className="object-contain"
+                priority
               />
               <span className="font-headline text-xl font-semibold text-primary">Admin</span>
             </Link>
             <nav className="flex-1 space-y-1">
               {adminNavLinks.map((link) => {
-                // Defensive check for malformed links, though adminNavLinks is static
                 if (!link || typeof link.href !== 'string' || typeof link.label !== 'string') {
                   console.error("Malformed admin nav link encountered:", link);
                   return null; 

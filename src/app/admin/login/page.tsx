@@ -56,12 +56,12 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
            <Image
-                src="https://placehold.co/150x75.png"
-                alt="Saleeka Admin Logo"
-                width={150}
-                height={75}
-                data-ai-hint="Saleeka logo text"
+                src="/saleeka-logo.png" // Using static logo
+                alt="Saleeka Foundation Logo"
+                width={150} // Adjust as needed
+                height={50}  // Adjust as needed
                 className="object-contain mx-auto mb-4"
+                priority
               />
           <CardTitle className="font-headline text-2xl text-primary">Admin Login</CardTitle>
           <CardDescription>Access the Saleeka Foundation dashboard.</CardDescription>

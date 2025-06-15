@@ -28,12 +28,12 @@ const Header = () => {
         <div className="container flex h-20 items-center justify-between">
            <Link href="/" className="flex items-center">
             <Image
-              src="https://placehold.co/120x60.png"
-              alt="Saleeka Logo"
-              width={120}
-              height={60}
-              data-ai-hint="Saleeka logo text"
+              src="/saleeka-logo.png" // Using static logo
+              alt="Saleeka Foundation Logo"
+              width={120} // Adjust as needed
+              height={40} // Adjust as needed
               className="object-contain"
+              priority // Prioritize loading the logo
             />
           </Link>
           <div className="md:hidden">
@@ -83,7 +83,6 @@ const Header = () => {
       );
     }
 
-    // Explicitly check userProfile AND userProfile.type
     if (user && userProfile && typeof userProfile.type === 'string') {
       const isAdmin = userProfile.type === 'admin';
       return (
@@ -106,8 +105,6 @@ const Header = () => {
       return renderLink({ href: '/admin/login', label: 'Login', icon: LogIn }, isMobile);
     }
     
-    // Fallback if user is logged in but profile or type isn't fully ready (should be brief)
-    // This could happen if AuthContext is still fetching/setting the profile from Firestore.
     return (
         <div className={cn("flex items-center", isMobile ? "px-4 py-2" : "px-3 py-2")}>
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -129,12 +126,12 @@ const Header = () => {
       <div className="container flex h-20 items-center justify-between">
         <Link href="/" className="flex items-center">
           <Image
-            src="https://placehold.co/120x60.png"
-            alt="Saleeka Logo"
-            width={120}
-            height={60}
-            data-ai-hint="Saleeka logo text"
+            src="/saleeka-logo.png" // Using static logo
+            alt="Saleeka Foundation Logo"
+            width={120} // Adjust as needed
+            height={40} // Adjust as needed
             className="object-contain"
+            priority
           />
         </Link>
 
@@ -156,12 +153,12 @@ const Header = () => {
                 <div className="flex justify-between items-center">
                     <Link href="/" className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
                         <Image
-                          src="https://placehold.co/120x60.png"
-                          alt="Saleeka Logo"
-                          width={120}
-                          height={60}
-                          data-ai-hint="Saleeka logo text"
+                          src="/saleeka-logo.png" // Using static logo
+                          alt="Saleeka Foundation Logo"
+                          width={120} // Adjust as needed
+                          height={40} // Adjust as needed
                           className="object-contain"
+                          priority
                         />
                     </Link>
                     <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
