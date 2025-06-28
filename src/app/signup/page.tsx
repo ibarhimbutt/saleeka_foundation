@@ -106,6 +106,8 @@ export default function SignupPage() {
         uid: user.uid,
         email: formData.email,
         displayName: displayName,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         role: 'viewer', // Default role for new users
         type: formData.userType,
         createdAt: serverTimestamp() as any,

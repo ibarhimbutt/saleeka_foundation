@@ -1,4 +1,3 @@
-
 import type { Timestamp } from 'firebase/firestore';
 
 // Program data structure (already adjusted for Firestore)
@@ -26,7 +25,6 @@ export type MediaItem = {
   promptKey: string; // The sanitized key used as doc ID, stored for convenience
 };
 
-
 // RBAC Roles for Admin Users
 export type UserRole = 'superAdmin' | 'editor' | 'viewer' | 'none';
 
@@ -38,11 +36,64 @@ export interface UserProfile {
   uid: string; // Firebase Auth UID, also document ID
   email: string;
   displayName?: string;
+  firstName?: string;
+  lastName?: string;
   role: UserRole;
   type: UserType; // New field for user classification
   photoURL?: string;
+  bio?: string;
+  interests?: string[];
+  phone?: string;
+  location?: string;
+  website?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  twitterUrl?: string;
+  company?: string;
+  jobTitle?: string;
+  skills?: string[];
+  experience?: string;
+  education?: string;
+  subscribeNewsletter?: boolean;
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+  marketingEmails?: boolean;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
   lastLoginAt?: Timestamp;
-  // any other relevant user profile fields
+  isActive?: boolean;
+  isVerified?: boolean;
+  // Privacy settings
+  profileVisibility?: 'public' | 'private' | 'members-only';
+  showEmail?: boolean;
+  showPhone?: boolean;
+  showLocation?: boolean;
 }
 
+// User Settings for preferences
+export interface UserSettings {
+  uid: string;
+  theme?: 'light' | 'dark' | 'system';
+  language?: string;
+  timezone?: string;
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+  marketingEmails?: boolean;
+  weeklyDigest?: boolean;
+  mentorshipNotifications?: boolean;
+  projectUpdates?: boolean;
+  communityUpdates?: boolean;
+  updatedAt: Timestamp;
+}
+
+// User Activity Log
+export interface UserActivity {
+  id: string;
+  uid: string;
+  action: string;
+  description: string;
+  metadata?: Record<string, any>;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: Timestamp;
+}
