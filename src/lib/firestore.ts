@@ -123,12 +123,54 @@ export const getUserActivity = async (uid: string, limitCount: number = 10): Pro
 };
 
 // Utility functions
-export const formatTimestamp = (timestamp: Timestamp | undefined): string => {
+export const formatTimestamp = (timestamp: Timestamp | undefined | null): string => {
   if (!timestamp) return 'N/A';
-  return timestamp.toDate().toLocaleDateString();
+  
+  try {
+    // Check if it's a Firestore Timestamp object
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate().toLocaleDateString();
+    }
+    
+    // If it's already a Date object
+    if (timestamp instanceof Date) {
+      return timestamp.toLocaleDateString();
+    }
+    
+    // If it's a timestamp object with seconds property (Firestore server timestamp)
+    if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
+      return new Date((timestamp as any).seconds * 1000).toLocaleDateString();
+    }
+    
+    return 'N/A';
+  } catch (error) {
+    console.error('Error formatting timestamp:', error);
+    return 'N/A';
+  }
 };
 
-export const formatDateTime = (timestamp: Timestamp | undefined): string => {
+export const formatDateTime = (timestamp: Timestamp | undefined | null): string => {
   if (!timestamp) return 'N/A';
-  return timestamp.toDate().toLocaleString();
+  
+  try {
+    // Check if it's a Firestore Timestamp object
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate().toLocaleString();
+    }
+    
+    // If it's already a Date object
+    if (timestamp instanceof Date) {
+      return timestamp.toLocaleString();
+    }
+    
+    // If it's a timestamp object with seconds property (Firestore server timestamp)
+    if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
+      return new Date((timestamp as any).seconds * 1000).toLocaleString();
+    }
+    
+    return 'N/A';
+  } catch (error) {
+    console.error('Error formatting datetime:', error);
+    return 'N/A';
+  }
 };
