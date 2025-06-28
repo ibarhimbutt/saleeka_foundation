@@ -38,9 +38,6 @@ if (openaiApiKey) {
   }
 }
 
-
-
-
 // If OpenAI was not configured (either no key or failed init) AND Google AI key is present
 if (!successfullyInitializedPlugin && googleApiKey) {
   activePluginsInfo.push('OpenAI not configured or failed. Attempting Google AI plugin configuration...');
