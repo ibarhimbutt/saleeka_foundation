@@ -1,6 +1,4 @@
-
-
-import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home, LayoutDashboard, Users2, Building2, ImageUp, UserCircle, LogIn, LogOut, ImageIcon } from 'lucide-react';
+import { BookOpen, Users, Briefcase, Heart, MessageSquare, Info, Phone, HomeIcon as Home, LayoutDashboard, Users2, Building2, ImageUp, UserCircle, LogIn, LogOut, ImageIcon, UserPlus } from 'lucide-react';
 import type React from 'react';
 
 export type NavLink = {
@@ -18,6 +16,7 @@ export const navLinks: NavLink[] = [
   { href: '/get-involved', label: 'Get Involved', icon: Users },
   { href: '/blog', label: 'Blog', icon: MessageSquare },
   { href: '/contact', label: 'Contact Us', icon: Phone },
+  { href: '/signup', label: 'Sign Up', icon: UserPlus }, // Added signup link
   // Admin link removed, will be added dynamically in Header
 ];
 
@@ -120,14 +119,14 @@ export const sampleTeamMembers: TeamMember[] = [
   },
   {
     id: '2',
-    name: 'Estre D\\\'Mentore',
+    name: 'Iffat Shaheen',
     role: 'Head of Programs',
     bio: 'Dedicated to creating impactful programs that bridge the gap between education and industry.',
     imageUrl: 'https://placehold.co/300x300.png',
   },
   {
     id: '3',
-    name: 'Steve Black',
+    name: 'Taaha Najam',
     role: 'Community Manager',
     bio: 'Focused on building a vibrant and supportive community for all Saleeka members.',
     imageUrl: 'https://placehold.co/300x300.png',
@@ -292,6 +291,3 @@ export type BlogPost = {
   tags: string[];
   content?: string;
 };
-
-
-    
