@@ -34,7 +34,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             const userDocSnap = await getDoc(userDocRef);
             if (userDocSnap.exists()) {
-              setUserProfile(userDocSnap.data() as UserProfile);
+              const profileData = userDocSnap.data() as UserProfile;
+              setUserProfile(profileData);
+              console.log(`AuthContext: Loaded profile for user ${currentUser.uid}. Type: ${profileData.type}, Role: ${profileData.role}`);
             } else {
               console.warn(`AuthContext: No profile found in Firestore for user ${currentUser.uid}. This might be expected for new users or if provisioning is pending.`);
               // Assign a default 'viewer' role and 'unclassified' type if no profile exists
@@ -86,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setUser(null);
       setUserProfile(null); // Clear user profile on logout
-      router.push('/admin/login'); // Or your preferred logout destination
+      router.push('/'); // Redirect to home page instead of login
     } catch (error) {
       console.error("Error signing out: ", error);
     } finally {

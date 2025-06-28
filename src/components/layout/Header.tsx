@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -84,7 +83,9 @@ const Header = () => {
     }
 
     if (user && userProfile && typeof userProfile.type === 'string') {
-      const isAdmin = userProfile.type === 'admin';
+      // Check if user is admin type or has admin role
+      const isAdmin = userProfile.type === 'admin' || userProfile.role === 'superAdmin' || userProfile.role === 'editor';
+      
       return (
         <>
           {isAdmin ? (
