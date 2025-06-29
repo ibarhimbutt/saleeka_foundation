@@ -1,11 +1,7 @@
 'use server';
 
 /**
- * @fileOverview A content summarization AI agent.
- *
- * - summarizeContent - A function that handles the content summarization process.
- * - SummarizeContentInput - The input type for the summarizeContent function.
- * - SummarizeContentOutput - The return type for the summarizeContent function.
+ * @fileOverview A content summarization AI agent using OpenAI.
  */
 
 import {ai, defaultModel} from '@/ai/genkit';
@@ -24,52 +20,20 @@ export type SummarizeContentOutput = z.infer<typeof SummarizeContentOutputSchema
 export async function summarizeContent(input: SummarizeContentInput): Promise<SummarizeContentOutput> {
   try {
     console.log('SummarizeContent: Starting summarization for content length:', input.content.length);
+    console.log('SummarizeContent: Using model:', defaultModel);
     
     if (!input.content || input.content.trim().length === 0) {
       throw new Error('Content is empty or invalid');
     }
 
-    const result = await summarizeContentFlow(input);
-    console.log('SummarizeContent: Successfully generated summary');
-    return result;
-  } catch (error: any) {
-    console.error('SummarizeContent: Error during summarization:', error);
-    throw new Error(`Failed to summarize content: ${error.message || 'Unknown error'}`);
-  }
-}
+    if (!defaultModel) {
+      throw new Error('No AI model available. Please check your OpenAI API key configuration.');
+    }
 
-const prompt = ai.definePrompt({
-  name: 'summarizeContentPrompt',
-  input: {schema: SummarizeContentInputSchema},
-  output: {schema: SummarizeContentOutputSchema},
-  prompt: `You are an expert content summarizer. Please provide a clear, concise summary of the following content, highlighting the key points and main takeaways. Focus on the most important information that would be valuable to someone considering this program or opportunity.
-
-Content to summarize:
-{{{content}}}
-
-Please provide a well-structured summary that captures:
-- Main objectives and goals
-- Key features or benefits
-- Target audience
-- Important requirements or qualifications (if any)
-- Expected outcomes or value proposition
-
-Keep the summary informative yet concise, around 2-4 sentences.`,
-});
-
-const summarizeContentFlow = ai.defineFlow(
-  {
-    name: 'summarizeContentFlow',
-    inputSchema: SummarizeContentInputSchema,
-    outputSchema: SummarizeContentOutputSchema,
-  },
-  async (input) => {
-    try {
-      console.log('SummarizeContentFlow: Processing content with AI...');
-      
-      const response = await ai.generate({
-        model: defaultModel || 'openai/gpt-3.5-turbo',
-        prompt: `You are an expert content summarizer. Please provide a clear, concise summary of the following content, highlighting the key points and main takeaways. Focus on the most important information that would be valuable to someone considering this program or opportunity.
+    // Use direct AI generation instead of flow to ensure OpenAI is used
+    const response = await ai.generate({
+      model: 'openai/gpt-3.5-turbo', // Explicitly specify OpenAI model
+      prompt: `You are an expert content summarizer. Please provide a clear, concise summary of the following content, highlighting the key points and main takeaways. Focus on the most important information that would be valuable to someone considering this program or opportunity.
 
 Content to summarize:
 ${input.content}
@@ -82,24 +46,33 @@ Please provide a well-structured summary that captures:
 - Expected outcomes or value proposition
 
 Keep the summary informative yet concise, around 2-4 sentences.`,
-        config: {
-          temperature: 0.7,
-          maxOutputTokens: 300,
-        },
-      });
+      config: {
+        temperature: 0.7,
+        maxOutputTokens: 300,
+      },
+    });
 
-      const summary = response.text?.trim();
-      
-      if (!summary) {
-        throw new Error('AI generated empty response');
-      }
+    const summary = response.text?.trim();
+    
+    if (!summary) {
+      throw new Error('AI generated empty response');
+    }
 
-      console.log('SummarizeContentFlow: AI response received, length:', summary.length);
-      
-      return { summary };
-    } catch (error: any) {
-      console.error('SummarizeContentFlow: Error in AI generation:', error);
-      throw new Error(`AI generation failed: ${error.message || 'Unknown error'}`);
+    console.log('SummarizeContent: Successfully generated summary, length:', summary.length);
+    
+    return { summary };
+  } catch (error: any) {
+    console.error('SummarizeContent: Error during summarization:', error);
+    
+    // Provide more specific error messages
+    if (error.message?.includes('API key')) {
+      throw new Error('OpenAI API key is invalid or missing. Please check your .env file.');
+    } else if (error.message?.includes('quota')) {
+      throw new Error('OpenAI API quota exceeded. Please check your OpenAI account.');
+    } else if (error.message?.includes('rate limit')) {
+      throw new Error('OpenAI API rate limit reached. Please try again in a moment.');
+    } else {
+      throw new Error(`Failed to summarize content: ${error.message || 'Unknown error'}`);
     }
   }
-);
+}
