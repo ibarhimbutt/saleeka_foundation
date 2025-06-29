@@ -14,6 +14,7 @@ export type SummarizeContentOutput = {
   summary: string;
 };
 
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
