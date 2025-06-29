@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { summarizeContent, type SummarizeContentInput } from '@/ai/flows/summarize-content';
-import { Wand2 } from 'lucide-react';
+import { Wand2, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 type SummarizeButtonProps = {
   contentToSummarize: string;
@@ -22,18 +22,42 @@ export default function SummarizeButton({
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleSummarize = async () => {
+    if (!contentToSummarize || contentToSummarize.trim().length === 0) {
+      toast({
+        title: "No Content",
+        description: "There's no content to summarize.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setSummary(null);
+    
     try {
+      console.log('SummarizeButton: Starting summarization...');
       const input: SummarizeContentInput = { content: contentToSummarize };
       const result = await summarizeContent(input);
+      
       setSummary(result.summary);
-    } catch (e) {
-      console.error("Error summarizing content:", e);
-      setError("Failed to generate summary. Please try again.");
+      toast({
+        title: "Summary Generated",
+        description: "AI summary has been generated successfully!",
+      });
+      console.log('SummarizeButton: Summary generated successfully');
+    } catch (e: any) {
+      const errorMessage = e.message || "Failed to generate summary. Please try again.";
+      console.error("SummarizeButton: Error summarizing content:", e);
+      setError(errorMessage);
+      toast({
+        title: "Summarization Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -41,9 +65,18 @@ export default function SummarizeButton({
 
   return (
     <div className="space-y-4 my-4">
-      <Button onClick={handleSummarize} disabled={isLoading} className="gap-2">
-        <Wand2 size={18} />
-        {isLoading ? "Summarizing..." : buttonText}
+      <Button 
+        onClick={handleSummarize} 
+        disabled={isLoading || !contentToSummarize?.trim()} 
+        className="gap-2"
+        variant="outline"
+      >
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Wand2 className="h-4 w-4" />
+        )}
+        {isLoading ? "Generating Summary..." : buttonText}
       </Button>
       
       {error && (
@@ -61,7 +94,7 @@ export default function SummarizeButton({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-foreground">{summary}</p>
+            <p className="text-sm text-foreground leading-relaxed">{summary}</p>
           </CardContent>
         </Card>
       )}
