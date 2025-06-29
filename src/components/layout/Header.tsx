@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/co
 import { navLinks as baseNavLinks, type NavLink } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import ThemeToggle from '@/components/shared/ThemeToggle';
 
 const Header = () => {
   const pathname = usePathname();
@@ -35,10 +36,13 @@ const Header = () => {
               priority // Prioritize loading the logo
             />
           </Link>
-          <div className="md:hidden">
-            <Button variant="ghost" size="icon" disabled>
-              <Menu className="h-6 w-6" />
-            </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <div className="md:hidden">
+              <Button variant="ghost" size="icon" disabled>
+                <Menu className="h-6 w-6" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -138,9 +142,11 @@ const Header = () => {
 
         <nav className="hidden md:flex items-center space-x-1">
           <NavItems />
+          <ThemeToggle />
         </nav>
 
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center gap-2">
+          <ThemeToggle />
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
