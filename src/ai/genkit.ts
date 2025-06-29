@@ -1,5 +1,5 @@
-import {genkit} from 'genkit';
-import {openAI} from 'genkitx-openai';
+import { genkit } from 'genkit';
+import { openAI } from 'genkitx-openai';
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 
@@ -16,13 +16,13 @@ if (openaiApiKey) {
   try {
     console.log("Genkit.ts: Configuring OpenAI plugin...");
     
-    const openaiPlugin = openAI({ 
-      apiKey: openaiApiKey,
-    });
-    
-    // Initialize Genkit with ONLY OpenAI plugin
+    // Initialize Genkit with OpenAI plugin
     aiInstance = genkit({ 
-      plugins: [openaiPlugin]
+      plugins: [
+        openAI({ 
+          apiKey: openaiApiKey,
+        })
+      ]
     });
     
     defaultTextModelChoice = 'openai/gpt-3.5-turbo';
@@ -31,10 +31,6 @@ if (openaiApiKey) {
     
     console.log(`Genkit.ts: OpenAI plugin successfully initialized with model: ${defaultTextModelChoice}`);
     
-    // Verify the plugin is working
-    const models = aiInstance.listModels();
-    console.log(`Genkit.ts: Available models:`, models.map((m: any) => m.name));
-    
   } catch (e: any) {
     console.error('Genkit.ts: CRITICAL Error configuring OpenAI plugin:', e.message || String(e));
     activePluginsInfo.push(`OpenAI plugin FAILED to configure. Error: ${e.message || String(e)}`);
@@ -42,7 +38,7 @@ if (openaiApiKey) {
   }
 } else {
   console.error('Genkit.ts: No OpenAI API key found in environment variables');
-  activePluginsInfo.push('No OpenAI API key found. Please set OPENAI_API_KEY in your .env file.');
+  activePluginsInfo.push('No OpenAI API key found. Please set OPENAI_API_KEY in your .env.local file.');
 }
 
 // If OpenAI failed to initialize, create a basic instance without plugins

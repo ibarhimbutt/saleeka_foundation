@@ -1,4 +1,3 @@
-
 import { sampleBlogPosts, type BlogPost } from '@/lib/constants';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -16,11 +15,13 @@ export async function generateStaticParams() {
 }
 
 type BlogPostPageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>; // Changed to Promise for Next.js 15
 };
 
-export default function BlogPostPage({ params }: BlogPostPageProps) {
-  const post = sampleBlogPosts.find((p) => p.id === params.id);
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+  // Await the params object
+  const { id } = await params;
+  const post = sampleBlogPosts.find((p) => p.id === id);
 
   if (!post) {
     return (

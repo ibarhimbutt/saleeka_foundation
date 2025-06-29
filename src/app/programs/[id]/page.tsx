@@ -1,4 +1,3 @@
-
 import { samplePrograms, type Program } from '@/lib/constants';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -16,11 +15,13 @@ export async function generateStaticParams() {
 }
 
 type ProgramPageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>; // Changed to Promise for Next.js 15
 };
 
-export default function ProgramPage({ params }: ProgramPageProps) {
-  const program = samplePrograms.find((p) => p.id === params.id);
+export default async function ProgramPage({ params }: ProgramPageProps) {
+  // Await the params object
+  const { id } = await params;
+  const program = samplePrograms.find((p) => p.id === id);
 
   if (!program) {
     return (
