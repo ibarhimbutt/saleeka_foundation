@@ -18,6 +18,7 @@ const Header = () => {
   const [isMounted, setIsMounted] = useState(false);
   const { user, userProfile, loading, logout } = useAuth();
 
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
