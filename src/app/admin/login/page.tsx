@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase'; // Client-side Firebase auth
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -18,7 +19,30 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { user, userProfile, loading } = useAuth();
+
+  // Handle redirect after successful login
+  useEffect(() => {
+    if (!loading && user && userProfile) {
+      const redirectTo = searchParams.get('redirect');
+      
+      // Determine where to redirect based on user type and role
+      const isAdmin = userProfile.type === 'admin' || userProfile.role === 'superAdmin' || userProfile.role === 'editor';
+      
+      if (redirectTo) {
+        // If there's a specific redirect URL, use it
+        router.push(redirectTo);
+      } else if (isAdmin) {
+        // Admin users go to admin dashboard
+        router.push('/admin');
+      } else {
+        // Regular users go to their personal dashboard
+        router.push('/my-saleeka');
+      }
+    }
+  }, [user, userProfile, loading, router, searchParams]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -31,7 +55,7 @@ export default function AdminLoginPage() {
         title: "Login Successful",
         description: "Redirecting to dashboard...",
       });
-      router.push('/admin');
+      // Redirect will be handled by the useEffect above
     } catch (err: any) {
       console.error("Firebase login error:", err);
       let errorMessage = "Failed to login. Please check your credentials.";
@@ -51,6 +75,19 @@ export default function AdminLoginPage() {
     }
   };
 
+  // If user is already logged in, show loading while redirecting
+  if (!loading && user && userProfile) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-sm shadow-xl">
+          <CardContent className="p-6 text-center">
+            <p>Redirecting to your dashboard...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm shadow-xl">
@@ -63,8 +100,8 @@ export default function AdminLoginPage() {
                 className="object-contain mx-auto mb-4"
                 priority
               />
-          <CardTitle className="font-headline text-2xl text-primary">Admin Login</CardTitle>
-          <CardDescription>Access the Saleeka Foundation dashboard.</CardDescription>
+          <CardTitle className="font-headline text-2xl text-primary">Login</CardTitle>
+          <CardDescription>Access your Saleeka Foundation account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -73,7 +110,7 @@ export default function AdminLoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="your.email@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { updateUserProfile, getUserSettings, updateUserSettings, logUserActivity } from '@/lib/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ import type { UserProfile, UserSettings } from '@/lib/firestoreTypes';
 
 export default function ProfileSettings() {
   const { user, userProfile, loading } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [profileData, setProfileData] = useState<Partial<UserProfile>>({});
@@ -57,7 +59,7 @@ export default function ProfileSettings() {
           } else {
             // Set default settings
             setSettingsData({
-              theme: 'system',
+              theme: theme,
               language: 'en',
               emailNotifications: true,
               pushNotifications: true,
@@ -75,7 +77,7 @@ export default function ProfileSettings() {
     };
 
     loadUserSettings();
-  }, [user]);
+  }, [user, theme]);
 
   const handleProfileUpdate = async () => {
     if (!user?.uid) return;
@@ -143,6 +145,11 @@ export default function ProfileSettings() {
 
   const handleSettingsChange = (field: keyof UserSettings, value: any) => {
     setSettingsData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme);
+    handleSettingsChange('theme', newTheme);
   };
 
   const handleInterestsChange = (value: string) => {
@@ -363,8 +370,8 @@ export default function ProfileSettings() {
               <div className="space-y-2">
                 <Label htmlFor="theme">Theme</Label>
                 <Select
-                  value={settingsData.theme || 'system'}
-                  onValueChange={(value) => handleSettingsChange('theme', value)}
+                  value={theme}
+                  onValueChange={handleThemeChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select theme" />
