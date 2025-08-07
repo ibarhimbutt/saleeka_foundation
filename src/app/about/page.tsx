@@ -24,7 +24,7 @@ export default function AboutPage() {
               width={600}
               height={450}
               className="w-full h-auto object-cover"
-              fallbackImageUrl="https://placehold.co/600x450.png"
+              fallbackImageUrl="/ourVision.png"
             />
           </div>
           <div>

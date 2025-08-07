@@ -57,9 +57,8 @@ export default function Home() {
             </p>
           </div>
           <div className="rounded-lg overflow-hidden shadow-lg">
-            {/* Using static image here to reduce AI generation calls */}
             <Image
-              src="https://placehold.co/600x400.png"
+              src="/aiMentor.png"
               alt="Saleeka Foundation Community"
               width={600}
               height={400}
@@ -97,7 +96,7 @@ export default function Home() {
               height={300}
               className="w-full h-auto"
               imageClassName="object-cover"
-              fallbackImageUrl="https://placehold.co/800x300.png"
+              fallbackImageUrl="/Banner.png"
             />
           </div>
       </section>
