@@ -42,8 +42,8 @@ export default function Home() {
 
       {/* Intro to Saleeka Foundation */}
       <section className="container">
-        <SectionTitle 
-          title="Welcome to Saleeka Foundation" 
+        <SectionTitle
+          title="Welcome to Saleeka Foundation"
           subtitle="We are dedicated to fostering connections that empower individuals and communities. Our mission is to bridge the gap between education and industry, creating opportunities for all."
         />
         <div className="grid md:grid-cols-2 gap-8 items-center">
@@ -71,7 +71,7 @@ export default function Home() {
 
       {/* Pillars Section */}
       <section className="container">
-        <SectionTitle title="Our Four Pillars" subtitle="The interconnected foundation of Saleeka's ecosystem, driving growth and opportunity for everyone involved."/>
+        <SectionTitle title="Our Four Pillars" subtitle="The interconnected foundation of Saleeka's ecosystem, driving growth and opportunity for everyone involved." />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {pillars.map((pillar) => (
             <Card key={pillar.name} className="text-center hover:shadow-xl transition-shadow duration-300">
@@ -87,18 +87,18 @@ export default function Home() {
             </Card>
           ))}
         </div>
-         <div className="mt-8 rounded-lg overflow-hidden shadow-lg">
-            {/* Using AiImage for this one, but you could change it if needed */}
-            <AiImage
-              prompt="an abstract network graphic showing four distinct but interconnected pillars, symbolizing a foundation's core components"
-              alt="Four Pillars Connection Graphic"
-              width={800}
-              height={300}
-              className="w-full h-auto"
-              imageClassName="object-cover"
-              fallbackImageUrl="/Banner.png"
-            />
-          </div>
+        <div className="mt-8 rounded-lg overflow-hidden shadow-lg">
+          {/* Using AiImage for this one, but you could change it if needed */}
+          <AiImage
+            prompt="An abstract, modern network-style illustration featuring four distinct yet interconnected pillars, each representing one of the foundation’s core components: Students, Mentors, Organizations, and Donors. Each pillar should have its own unique color and subtle symbolic icon (e.g., book for Students, lightbulb for Mentors, building for Organizations, heart for Donors), with soft glowing lines connecting them in a harmonious circular network, conveying collaboration, support, and unity."
+            alt="Four Pillars Connection Graphic"
+            width={800}
+            height={300}
+            className="w-full h-auto"
+            imageClassName="object-cover"
+            fallbackImageUrl="/Banner.png"
+          />
+        </div>
       </section>
 
       {/* CTA Section */}

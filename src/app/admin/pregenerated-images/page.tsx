@@ -59,14 +59,14 @@ export default function AdminPregeneratedImagesPage() {
           [image.id]: {
             status: 'success',
             imageUrl: result.imageUrl,
-            provider: result.cached ? 'cache-firestore' : 'openai_dall-e-3_via_api',
-            message: `Generated via API ${result.cached ? '(from server cache)' : '(new generation)'}`,
-            cachedByApi: result.cached,
+            provider: 'google_gemini_via_api',
+            message: 'Generated via API (Gemini)',
+            cachedByApi: false,
           }
         }));
         toast({
           title: "Image Processed by API",
-          description: `Successfully processed image for: ${image.prompt.substring(0, 30)}... ${result.cached ? '(served from cache)' : ''}`,
+          description: `Successfully processed image for: ${image.prompt.substring(0, 30)}...`,
         });
       } else {
         setGenerationStates(prev => ({
@@ -122,7 +122,7 @@ export default function AdminPregeneratedImagesPage() {
         <CardTitle className="font-headline text-2xl text-primary">Predefined Image Management (via API)</CardTitle>
         <CardDescription>
           View and trigger generation for predefined AI images using the /api/generate-image route.
-          This API handles OpenAI interaction, self-hosting to Firebase Storage, and Firestore caching.
+          This API now uses Google GenAI (Gemini) for image generation and returns the image as a data URL.
         </CardDescription>
       </CardHeader>
 

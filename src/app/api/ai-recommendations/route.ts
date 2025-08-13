@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { ai } from '@/ai/genkit';
+import { GoogleGenAI } from "@google/genai";
+
+// Initialize Google GenAI client
+const ai = new GoogleGenAI({
+  apiKey: process.env.GOOGLE_GENAI_API_KEY || 'AIzaSyDwjzJs6cBx121GM_p2hLYxfyhBFA6qWlg',
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,12 +37,14 @@ export async function POST(req: NextRequest) {
     
     Keep recommendations specific and actionable.`;
 
-    const response = await ai.generate({
-      prompt,
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
       config: {
-        temperature: 0.7,
-        maxOutputTokens: 400,
-      },
+        thinkingConfig: {
+          thinkingBudget: 0, // Disables thinking
+        },
+      }
     });
 
     const recommendationsText = response.text?.trim() || '';

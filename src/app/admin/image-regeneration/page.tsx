@@ -65,7 +65,7 @@ export default function AdminImageRegenerationPage() {
       <CardHeader className="p-0">
         <CardTitle className="font-headline text-2xl text-primary">Image Regeneration</CardTitle>
         <CardDescription>
-          Enter a prompt to regenerate an AI image. This will clear any client-side cache for the prompt and request a new image from the generation service (via /api/generate-image). The API service will handle server-side caching and OpenAI interaction.
+          Enter a prompt to regenerate an AI image. This will clear any client-side cache for the prompt and request a new image from the generation service (via /api/generate-image). The API service now uses Google GenAI (Gemini) and returns a data URL.
         </CardDescription>
       </CardHeader>
 
