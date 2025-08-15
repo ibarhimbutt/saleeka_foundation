@@ -175,7 +175,7 @@ export default function SignupPage() {
         <div className="hidden md:block space-y-6">
           <div className="text-center">
             <Image
-              src="/saleeka-logo.png"
+              src="./saleeka-logo.png"
               alt="Saleeka Foundation Logo"
               width={200}
               height={67}
@@ -218,7 +218,7 @@ export default function SignupPage() {
           <CardHeader className="text-center md:text-left">
             <div className="md:hidden mb-4">
               <Image
-                src="/saleeka-logo.png"
+                src="./saleeka-logo.png"
                 alt="Saleeka Foundation Logo"
                 width={150}
                 height={50}

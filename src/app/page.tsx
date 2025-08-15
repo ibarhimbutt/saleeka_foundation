@@ -58,7 +58,7 @@ export default function Home() {
           </div>
           <div className="rounded-lg overflow-hidden shadow-lg">
             <Image
-              src="/aiMentor.png"
+              src="./aiMentor.png"
               alt="Saleeka Foundation Community"
               width={600}
               height={400}
