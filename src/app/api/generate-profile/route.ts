@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 
 // Initialize Google GenAI client
 const ai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY || 'AIzaSyDwjzJs6cBx121GM_p2hLYxfyhBFA6qWlg',
+  apiKey: process.env.GEMINI_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
