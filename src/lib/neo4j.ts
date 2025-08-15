@@ -7,13 +7,40 @@ const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD;
 
 let driver: Driver | null = null;
 
+// Validate environment variables
+const validateEnvVars = () => {
+  if (!NEO4J_URI) {
+    throw new Error('NEO4J_URI environment variable is not set');
+  }
+  if (!NEO4J_USERNAME) {
+    throw new Error('NEO4J_USERNAME environment variable is not set');
+  }
+  if (!NEO4J_PASSWORD) {
+    throw new Error('NEO4J_PASSWORD environment variable is not set');
+  }
+  
+  console.log('✅ Neo4j environment variables loaded:', {
+    uri: NEO4J_URI,
+    username: NEO4J_USERNAME,
+    password: NEO4J_PASSWORD ? '***' : 'NOT SET'
+  });
+};
+
 // Initialize Neo4j driver
 export const initNeo4j = (): Driver => {
+  // Only run on server side
+  if (typeof window !== 'undefined') {
+    throw new Error('Neo4j driver cannot be initialized on the client side');
+  }
+
   if (!driver) {
     try {
+      // Validate environment variables first
+      validateEnvVars();
+      
       driver = neo4j.driver(
-        NEO4J_URI,
-        neo4j.auth.basic(NEO4J_USERNAME, NEO4J_PASSWORD),
+        NEO4J_URI!,
+        neo4j.auth.basic(NEO4J_USERNAME!, NEO4J_PASSWORD!),
         {
           maxConnectionLifetime: 3 * 60 * 60 * 1000, // 3 hours
           maxConnectionPoolSize: 50,
@@ -37,6 +64,11 @@ export const initNeo4j = (): Driver => {
 
 // Get Neo4j driver instance
 export const getNeo4jDriver = (): Driver => {
+  // Only run on server side
+  if (typeof window !== 'undefined') {
+    throw new Error('Neo4j driver cannot be accessed on the client side');
+  }
+
   if (!driver) {
     return initNeo4j();
   }

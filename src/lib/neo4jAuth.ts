@@ -301,14 +301,14 @@ export const deleteUser = async (user: AuthUser): Promise<void> => {
 };
 
 // Simple password hashing (in production, use bcrypt)
-const hashPassword = async (password: string): Promise<string> => {
+export const hashPassword = async (password: string): Promise<string> => {
   // For demo purposes, store password as-is (NOT recommended for production!)
   console.log('hashPassword - Input:', password, 'Output:', password);
   return password;
 };
 
 // Simple password verification (in production, use bcrypt)
-const verifyPassword = async (password: string, hashedPassword: string): Promise<boolean> => {
+export const verifyPassword = async (password: string, hashedPassword: string): Promise<boolean> => {
   // For demo purposes, compare passwords directly (NOT recommended for production!)
   console.log('verifyPassword - Input password:', password);
   console.log('verifyPassword - Stored password:', hashedPassword);
