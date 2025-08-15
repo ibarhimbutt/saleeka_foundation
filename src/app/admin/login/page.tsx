@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, type FormEvent, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 // FIREBASE IMPORTS COMMENTED OUT - NOW USING NEO4J
 // import { signInWithEmailAndPassword } from 'firebase/auth';
 // import { auth } from '@/lib/firebase'; // Client-side Firebase auth
@@ -98,13 +98,13 @@ const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
   };
 };
 
-export default function AdminLoginPage() {
+// Client component that uses useSearchParams
+function AdminLoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user, userProfile, loading, setUser, setUserProfile } = useAuth();
 
@@ -114,23 +114,12 @@ export default function AdminLoginPage() {
     
     if (!loading && user && userProfile) {
       console.log('Conditions met for redirect');
-      const redirectTo = searchParams.get('redirect');
       
       // Determine where to redirect based on user type and role
       const isAdmin = userProfile.type === 'admin' || userProfile.role === 'superAdmin' || userProfile.role === 'editor';
       console.log('User is admin:', isAdmin, 'userProfile.type:', userProfile.type, 'userProfile.role:', userProfile.role);
       
-      if (redirectTo) {
-        // If there's a specific redirect URL, use it
-        console.log('Redirecting to specific URL:', redirectTo);
-        router.push(redirectTo);
-        // Fallback redirect
-        setTimeout(() => {
-          if (window.location.pathname !== redirectTo) {
-            window.location.href = redirectTo;
-          }
-        }, 1000);
-      } else if (isAdmin) {
+      if (isAdmin) {
         // Admin users go to admin dashboard
         console.log('Redirecting admin to dashboard');
         router.push('/admin');
@@ -152,7 +141,7 @@ export default function AdminLoginPage() {
         }, 1000);
       }
     }
-  }, [user, userProfile, loading, router, searchParams]);
+  }, [user, userProfile, loading, router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -225,7 +214,7 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
            <Image
-                src="/saleeka-logo.png" // Using static logo
+                src="./saleeka-logo.png" // Using static logo
                 alt="Saleeka Foundation Logo"
                 width={150} // Adjust as needed
                 height={50}  // Adjust as needed
@@ -274,5 +263,22 @@ export default function AdminLoginPage() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-sm shadow-xl">
+          <CardContent className="p-6 text-center">
+            <p>Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <AdminLoginForm />
+    </Suspense>
   );
 }
