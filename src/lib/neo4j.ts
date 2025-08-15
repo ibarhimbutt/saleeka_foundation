@@ -1,9 +1,9 @@
 import neo4j, { Driver, Session, Transaction } from 'neo4j-driver';
 
 // Neo4j Aura connection configuration
-const NEO4J_URI = 'neo4j+s://0a15aa82.databases.neo4j.io';
-const NEO4J_USERNAME = 'neo4j';
-const NEO4J_PASSWORD = 'l1iMNkTdFxLS4qW5VvVNKU2SwP8CVXT7ITtVdT3u1to';
+const NEO4J_URI = process.env.NEO4J_URI;
+const NEO4J_USERNAME = process.env.NEO4J_USERNAME;
+const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD;
 
 let driver: Driver | null = null;
 
