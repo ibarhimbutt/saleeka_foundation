@@ -107,9 +107,14 @@ const DonorForm = () => (
 );
 
 
-export default function GetInvolvedPage({ searchParams }: { searchParams?: { tab?: string } }) {
-  const initialTab = searchParams?.tab && involvementTypes.some(type => type.id === searchParams.tab) 
-    ? searchParams.tab 
+export default async function GetInvolvedPage({ 
+  searchParams 
+}: { 
+  searchParams?: Promise<{ tab?: string }> 
+}) {
+  const params = searchParams ? await searchParams : undefined;
+  const initialTab = params?.tab && involvementTypes.some(type => type.id === params.tab)
+    ? params.tab
     : involvementTypes[0].id;
 
   return (
