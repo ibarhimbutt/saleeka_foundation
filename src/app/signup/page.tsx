@@ -2,9 +2,13 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+// FIREBASE IMPORTS COMMENTED OUT - NOW USING NEO4J
+// import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+// import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+// import { auth, db } from '@/lib/firebase';
+
+// Import Neo4j authentication
+import { createUserWithEmailAndPassword, updateProfile, updateUserPassword } from '@/lib/neo4jAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,12 +53,37 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Password update state
+  const [updateEmail, setUpdateEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordUpdateMessage, setPasswordUpdateMessage] = useState('');
+  
   const router = useRouter();
   const { toast } = useToast();
 
   const handleInputChange = (field: keyof SignupFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (error) setError(null);
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (!updateEmail || !newPassword) return;
+    
+    setIsUpdatingPassword(true);
+    setPasswordUpdateMessage('');
+    
+    try {
+      await updateUserPassword(updateEmail, newPassword);
+      setPasswordUpdateMessage('Password updated successfully!');
+      setUpdateEmail('');
+      setNewPassword('');
+    } catch (error) {
+      setPasswordUpdateMessage(`Error updating password: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   const validateForm = (): string | null => {
@@ -86,38 +115,23 @@ export default function SignupPage() {
     setError(null);
 
     try {
-      // Create user with Firebase Auth
+      // Create user with Neo4j Auth
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
         formData.email,
-        formData.password
+        formData.password,
+        `${formData.firstName} ${formData.lastName}`,
+        formData.userType
       );
 
       const user = userCredential.user;
       const displayName = `${formData.firstName} ${formData.lastName}`;
 
-      // Update user profile
-      await updateProfile(user, {
-        displayName: displayName,
-      });
-
-      // Create user profile in Firestore
-      const userProfile: UserProfile = {
-        uid: user.uid,
-        email: formData.email,
-        displayName: displayName,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        role: 'viewer', // Default role for new users
-        type: formData.userType,
-        createdAt: serverTimestamp() as any,
-        // Additional fields based on user type
-        ...(formData.interests && { interests: formData.interests.split(',').map(i => i.trim()) }),
-        ...(formData.bio && { bio: formData.bio }),
-        ...(formData.subscribeNewsletter && { subscribeNewsletter: true }),
-      };
-
-      await setDoc(doc(db, 'users', user.uid), userProfile);
+      // Update user profile with additional information
+      // Note: Neo4j auth already creates the user profile, so we just update additional fields
+      if (formData.interests || formData.bio || formData.subscribeNewsletter) {
+        // Additional profile updates can be done here if needed
+        // For now, the basic profile is created during user creation
+      }
 
       toast({
         title: "Account Created Successfully!",
@@ -135,11 +149,11 @@ export default function SignupPage() {
       console.error("Signup error:", err);
       let errorMessage = "Failed to create account. Please try again.";
       
-      if (err.code === 'auth/email-already-in-use') {
+      if (err.message === 'auth/email-already-in-use') {
         errorMessage = "An account with this email already exists.";
-      } else if (err.code === 'auth/weak-password') {
+      } else if (err.message === 'auth/weak-password') {
         errorMessage = "Password is too weak. Please choose a stronger password.";
-      } else if (err.code === 'auth/invalid-email') {
+      } else if (err.message === 'auth/invalid-email') {
         errorMessage = "Please enter a valid email address.";
       }
       
@@ -411,6 +425,57 @@ export default function SignupPage() {
                 {isLoading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
+
+            {/* Temporary Password Update Section */}
+            <div className="mt-6 p-4 border border-orange-200 bg-orange-50 rounded-lg">
+              <h3 className="text-sm font-medium text-orange-800 mb-3">
+                🔧 Temporary Password Update Tool (For Testing)
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="updateEmail" className="text-xs text-orange-700">
+                    Email to update:
+                  </Label>
+                  <Input
+                    id="updateEmail"
+                    type="email"
+                    placeholder="user@example.com"
+                    value={updateEmail}
+                    onChange={(e) => setUpdateEmail(e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="newPassword" className="text-xs text-orange-700">
+                    New password:
+                  </Label>
+                  <Input
+                    id="newPassword"
+                    type="text"
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <Button
+                  onClick={handlePasswordUpdate}
+                  disabled={!updateEmail || !newPassword || isUpdatingPassword}
+                  className="w-full text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                </Button>
+                {passwordUpdateMessage && (
+                  <div className={`text-xs p-2 rounded ${
+                    passwordUpdateMessage.includes('successfully') 
+                      ? 'bg-green-100 text-green-800 border border-green-200' 
+                      : 'bg-red-100 text-red-800 border border-red-200'
+                  }`}>
+                    {passwordUpdateMessage}
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
           
           <CardFooter className="text-center">
