@@ -1,8 +1,11 @@
 {
   "name": "nextn",
+  "homepage":"https://ibrahimbutt.github.io/saleeka_foundation",
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
@@ -48,7 +51,6 @@
     "firebase-admin": "^12.7.0",
     "genkit": "^1.8.0",
     "genkitx-openai": "0.6.0",
-    "gh-pages": "^6.3.0",
     "lucide-react": "^0.475.0",
     "neo4j-driver": "^5.28.1",
     "next": "15.3.3",
@@ -70,6 +72,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "genkit-cli": "^0.0.2",
+    "gh-pages": "^6.3.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
