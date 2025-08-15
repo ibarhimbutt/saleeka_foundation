@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 // import { auth, db } from '@/lib/firebase';
 
 // Import Neo4j authentication
-import { createUserWithEmailAndPassword, updateProfile, updateUserPassword } from '@/lib/neo4jAuth';
+import { createUserWithEmailAndPassword, updateUserPassword, updateProfile } from '@/lib/apiAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

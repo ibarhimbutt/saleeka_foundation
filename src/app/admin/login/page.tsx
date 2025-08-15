@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 // import { auth } from '@/lib/firebase'; // Client-side Firebase auth
 
 // Import Neo4j authentication
-import { signInWithEmailAndPassword } from '@/lib/neo4jAuth';
+import { signInWithEmailAndPassword, getUserProfile } from '@/lib/apiAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,6 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { createSession } from '@/lib/neo4jAuth';
-import { Neo4jUserService } from '@/lib/neo4jService';
 import type { UserProfile } from '@/lib/firestoreTypes';
 
 // Utility function to convert Neo4j node to UserProfile
@@ -162,9 +161,9 @@ function AdminLoginForm() {
       console.log('Created session token:', sessionToken);
       localStorage.setItem('neo4j_session_token', sessionToken);
       
-      // Fetch the actual user profile from Neo4j
-      console.log('Fetching user profile from Neo4j...');
-      const fetchedUserProfile = await Neo4jUserService.getUserByEmail(result.user.email);
+      // Fetch the actual user profile from API
+      console.log('Fetching user profile from API...');
+      const fetchedUserProfile = await getUserProfile(result.user.email);
       console.log('Fetched user profile:', fetchedUserProfile);
       if (fetchedUserProfile) {
         const convertedProfile = convertNeo4jNodeToUserProfile(fetchedUserProfile);

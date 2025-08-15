@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
-            role: user.role
+            role: user.role,
+            emailVerified: false,
+            isAnonymous: false
           }
         });
 
@@ -70,7 +72,9 @@ export async function POST(request: NextRequest) {
             uid,
             email,
             displayName,
-            role: userType || 'student'
+            role: userType || 'student',
+            emailVerified: false,
+            isAnonymous: false
           }
         });
 
