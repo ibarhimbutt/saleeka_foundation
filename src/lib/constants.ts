@@ -4,7 +4,7 @@ import type React from 'react';
 export type NavLink = {
   href: string;
   label: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<any>;
   action?: () => void; // For logout or other actions
 };
 
@@ -167,7 +167,7 @@ export type InvolvementType = {
   title: string;
   description: string;
   ctaText: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<any>;
 };
 
 export const involvementTypes: InvolvementType[] = [
