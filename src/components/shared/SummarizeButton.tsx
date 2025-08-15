@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { summarizeContent, type SummarizeContentInput } from '@/ai/flows/summarize-content';
+import { summarizeContent, type SummarizeContentInput } from '@/lib/ai-utils';
 import { Wand2, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';

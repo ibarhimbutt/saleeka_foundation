@@ -1,28 +1,38 @@
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  getDocs,
-  serverTimestamp,
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+// FIREBASE IMPORTS COMMENTED OUT - NOW USING NEO4J
+// import { 
+//   doc, 
+//   getDoc, 
+//   setDoc, 
+//   updateDoc, 
+//   collection, 
+//   query, 
+//   where, 
+//   orderBy, 
+//   limit, 
+//   getDocs,
+//   serverTimestamp,
+//   Timestamp 
+// } from 'firebase/firestore';
+// import { db } from '@/lib/firebase';
 import type { UserProfile, UserSettings, UserActivity } from '@/lib/firestoreTypes';
+
+// Import Neo4j replacement functions
+import {
+  getUserProfile as neo4jGetUserProfile,
+  createUserProfile as neo4jCreateUserProfile,
+  updateUserProfile as neo4jUpdateUserProfile,
+  getUserSettings as neo4jGetUserSettings,
+  updateUserSettings as neo4jUpdateUserSettings,
+  logUserActivity as neo4jLogUserActivity,
+  getUserActivity as neo4jGetUserActivity,
+  formatTimestamp as neo4jFormatTimestamp,
+  formatDateTime as neo4jFormatDateTime
+} from './neo4jFirestoreReplacement';
 
 // User Profile Operations
 export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
   try {
-    const userDoc = await getDoc(doc(db, 'users', uid));
-    if (userDoc.exists()) {
-      return userDoc.data() as UserProfile;
-    }
-    return null;
+    return await neo4jGetUserProfile(uid);
   } catch (error) {
     console.error('Error fetching user profile:', error);
     throw error;
@@ -31,11 +41,8 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
 
 export const createUserProfile = async (profile: Omit<UserProfile, 'createdAt' | 'updatedAt'>): Promise<void> => {
   try {
-    const userRef = doc(db, 'users', profile.uid);
-    await setDoc(userRef, {
+    await neo4jCreateUserProfile({
       ...profile,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
       isActive: true,
       isVerified: false,
       profileVisibility: 'public',
@@ -51,11 +58,7 @@ export const createUserProfile = async (profile: Omit<UserProfile, 'createdAt' |
 
 export const updateUserProfile = async (uid: string, updates: Partial<UserProfile>): Promise<void> => {
   try {
-    const userRef = doc(db, 'users', uid);
-    await updateDoc(userRef, {
-      ...updates,
-      updatedAt: serverTimestamp(),
-    });
+    await neo4jUpdateUserProfile(uid, updates);
   } catch (error) {
     console.error('Error updating user profile:', error);
     throw error;
@@ -65,11 +68,7 @@ export const updateUserProfile = async (uid: string, updates: Partial<UserProfil
 // User Settings Operations
 export const getUserSettings = async (uid: string): Promise<UserSettings | null> => {
   try {
-    const settingsDoc = await getDoc(doc(db, 'userSettings', uid));
-    if (settingsDoc.exists()) {
-      return settingsDoc.data() as UserSettings;
-    }
-    return null;
+    return await neo4jGetUserSettings(uid);
   } catch (error) {
     console.error('Error fetching user settings:', error);
     throw error;
@@ -78,12 +77,7 @@ export const getUserSettings = async (uid: string): Promise<UserSettings | null>
 
 export const updateUserSettings = async (uid: string, settings: Partial<UserSettings>): Promise<void> => {
   try {
-    const settingsRef = doc(db, 'userSettings', uid);
-    await setDoc(settingsRef, {
-      uid,
-      ...settings,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    await neo4jUpdateUserSettings(uid, settings);
   } catch (error) {
     console.error('Error updating user settings:', error);
     throw error;
@@ -93,12 +87,7 @@ export const updateUserSettings = async (uid: string, settings: Partial<UserSett
 // User Activity Operations
 export const logUserActivity = async (activity: Omit<UserActivity, 'id' | 'createdAt'>): Promise<void> => {
   try {
-    const activityRef = doc(collection(db, 'userActivity'));
-    await setDoc(activityRef, {
-      ...activity,
-      id: activityRef.id,
-      createdAt: serverTimestamp(),
-    });
+    await neo4jLogUserActivity(activity);
   } catch (error) {
     console.error('Error logging user activity:', error);
     throw error;
@@ -107,15 +96,7 @@ export const logUserActivity = async (activity: Omit<UserActivity, 'id' | 'creat
 
 export const getUserActivity = async (uid: string, limitCount: number = 10): Promise<UserActivity[]> => {
   try {
-    const q = query(
-      collection(db, 'userActivity'),
-      where('uid', '==', uid),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as UserActivity);
+    return await neo4jGetUserActivity(uid, limitCount);
   } catch (error) {
     console.error('Error fetching user activity:', error);
     throw error;
@@ -123,54 +104,10 @@ export const getUserActivity = async (uid: string, limitCount: number = 10): Pro
 };
 
 // Utility functions
-export const formatTimestamp = (timestamp: Timestamp | undefined | null): string => {
-  if (!timestamp) return 'N/A';
-  
-  try {
-    // Check if it's a Firestore Timestamp object
-    if (timestamp && typeof timestamp.toDate === 'function') {
-      return timestamp.toDate().toLocaleDateString();
-    }
-    
-    // If it's already a Date object
-    if (timestamp instanceof Date) {
-      return timestamp.toLocaleDateString();
-    }
-    
-    // If it's a timestamp object with seconds property (Firestore server timestamp)
-    if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
-      return new Date((timestamp as any).seconds * 1000).toLocaleDateString();
-    }
-    
-    return 'N/A';
-  } catch (error) {
-    console.error('Error formatting timestamp:', error);
-    return 'N/A';
-  }
+export const formatTimestamp = (timestamp: any): string => {
+  return neo4jFormatTimestamp(timestamp);
 };
 
-export const formatDateTime = (timestamp: Timestamp | undefined | null): string => {
-  if (!timestamp) return 'N/A';
-  
-  try {
-    // Check if it's a Firestore Timestamp object
-    if (timestamp && typeof timestamp.toDate === 'function') {
-      return timestamp.toDate().toLocaleString();
-    }
-    
-    // If it's already a Date object
-    if (timestamp instanceof Date) {
-      return timestamp.toLocaleString();
-    }
-    
-    // If it's a timestamp object with seconds property (Firestore server timestamp)
-    if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
-      return new Date((timestamp as any).seconds * 1000).toLocaleString();
-    }
-    
-    return 'N/A';
-  } catch (error) {
-    console.error('Error formatting datetime:', error);
-    return 'N/A';
-  }
+export const formatDateTime = (timestamp: any): string => {
+  return neo4jFormatDateTime(timestamp);
 };
