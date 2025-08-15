@@ -29,7 +29,7 @@ const Header = () => {
         <div className="container flex h-20 items-center justify-between">
            <Link href="/" className="flex items-center">
             <Image
-              src="./saleeka-logo.png" // Using static logo
+              src="/saleeka-logo.png" // Using static logo
               alt="Saleeka Foundation Logo"
               width={120} // Adjust as needed
               height={40} // Adjust as needed
@@ -132,7 +132,7 @@ const Header = () => {
       <div className="container flex h-20 items-center justify-between">
         <Link href="/" className="flex items-center">
           <Image
-            src="./logo.png" // Using static logo
+            src="/logo.png" // Using static logo
             alt="Saleeka Foundation Logo"
             width={120} // Adjust as needed
             height={40} // Adjust as needed
@@ -161,7 +161,7 @@ const Header = () => {
                 <div className="flex justify-between items-center">
                     <Link href="/" className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
                         <Image
-                          src="./saleeka-logo.png" // Using static logo
+                          src="/saleeka-logo.png" // Using static logo
                           alt="Saleeka Foundation Logo"
                           width={120} // Adjust as needed
                           height={40} // Adjust as needed

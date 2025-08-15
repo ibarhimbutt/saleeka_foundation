@@ -214,7 +214,7 @@ function AdminLoginForm() {
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
            <Image
-                src="./saleeka-logo.png" // Using static logo
+                src="/saleeka-logo.png" // Using static logo
                 alt="Saleeka Foundation Logo"
                 width={150} // Adjust as needed
                 height={50}  // Adjust as needed
