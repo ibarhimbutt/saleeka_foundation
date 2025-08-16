@@ -31,13 +31,13 @@ if (typeof window !== 'undefined') {
       `Firebase.ts: WARNING - Missing Firebase config environment variables for client SDK: ${missingConfigKeys.join(", ")}. Check your .env file and ensure they are prefixed with NEXT_PUBLIC_.`
     );
   }
-  // console.log("Firebase.ts: Using Firebase config from environment variables (client-side):");
-  // console.log("- apiKey:", firebaseConfigValues.apiKey ? "Exists" : "MISSING!");
-  // console.log("- authDomain:", firebaseConfigValues.authDomain || "MISSING!");
-  // console.log("- projectId:", firebaseConfigValues.projectId || "MISSING!");
-  // console.log("- storageBucket:", firebaseConfigValues.storageBucket || "MISSING!");
-  // console.log("- messagingSenderId:", firebaseConfigValues.messagingSenderId || "MISSING!");
-  // console.log("- appId:", firebaseConfigValues.appId || "MISSING!");
+  console.log("Firebase.ts: Using Firebase config from environment variables (client-side):");
+  console.log("- apiKey:", firebaseConfigValues.apiKey ? "Exists" : "MISSING!");
+  console.log("- authDomain:", firebaseConfigValues.authDomain || "MISSING!");
+  console.log("- projectId:", firebaseConfigValues.projectId || "MISSING!");
+  console.log("- storageBucket:", firebaseConfigValues.storageBucket || "MISSING!");
+  console.log("- messagingSenderId:", firebaseConfigValues.messagingSenderId || "MISSING!");
+  console.log("- appId:", firebaseConfigValues.appId || "MISSING!");
 }
 
 // Client-side initialization

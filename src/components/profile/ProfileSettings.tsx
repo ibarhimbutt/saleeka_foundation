@@ -3,32 +3,53 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { updateUserProfile, getUserSettings, updateUserSettings, logUserActivity } from '@/lib/firestore';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, User, Settings, Shield, Bell } from 'lucide-react';
+import { Save, User, Settings, Shield, Bell } from 'lucide-react';
 import type { UserProfile, UserSettings } from '@/lib/firestoreTypes';
+import { apiService } from '@/lib/api';
+import { useUserProfile, useUserSettings, useUserInterests, useUserActivity } from '@/hooks/use-api';
+import { InputField, TextareaField, SelectField, SwitchField } from '@/components/shared/FormField';
+import InterestsManager from '@/components/shared/InterestsManager';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
+
+interface Interest {
+  name: string;
+  category: string;
+  description: string;
+  popularity: number;
+}
 
 export default function ProfileSettings() {
   const { user, userProfile, loading } = useAuth();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Custom hooks for API operations
+  const { updateProfile, loading: profileUpdating } = useUserProfile();
+  const { updateSettings, loading: settingsUpdating } = useUserSettings();
+  const { updateInterests, loading: interestsUpdating } = useUserInterests();
+  const { logActivity } = useUserActivity();
+  
+  // Local state
   const [profileData, setProfileData] = useState<Partial<UserProfile>>({});
   const [settingsData, setSettingsData] = useState<Partial<UserSettings>>({});
+  const [userInterests, setUserInterests] = useState<Interest[]>([]);
+
+  const isUpdating = profileUpdating || settingsUpdating || interestsUpdating;
 
   useEffect(() => {
     if (userProfile) {
+      // Parse displayName into firstName and lastName for the form
+      const nameParts = (userProfile.displayName || '').split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
       setProfileData({
-        firstName: userProfile.firstName || '',
-        lastName: userProfile.lastName || '',
+        firstName,
+        lastName,
         email: userProfile.email || '',
         bio: userProfile.bio || '',
         phone: userProfile.phone || '',
@@ -39,7 +60,6 @@ export default function ProfileSettings() {
         twitterUrl: userProfile.twitterUrl || '',
         company: userProfile.company || '',
         jobTitle: userProfile.jobTitle || '',
-        interests: userProfile.interests || [],
         skills: userProfile.skills || [],
         profileVisibility: userProfile.profileVisibility || 'public',
         showEmail: userProfile.showEmail || false,
@@ -49,13 +69,35 @@ export default function ProfileSettings() {
     }
   }, [userProfile]);
 
+  // Load user interests
+  useEffect(() => {
+    const loadUserInterests = async () => {
+      if (user?.uid) {
+        try {
+          const response = await apiService.getUserInterests(user.uid);
+          if (response.success && response.interests) {
+            const uniqueInterests = response.interests.filter((interest: Interest, index: number, self: Interest[]) => 
+              index === self.findIndex(i => i.name === interest.name)
+            );
+            setUserInterests(uniqueInterests);
+          }
+        } catch (error) {
+          console.error('Error loading user interests:', error);
+        }
+      }
+    };
+
+    loadUserInterests();
+  }, [user]);
+
+  // Load user settings
   useEffect(() => {
     const loadUserSettings = async () => {
       if (user?.uid) {
         try {
-          const settings = await getUserSettings(user.uid);
-          if (settings) {
-            setSettingsData(settings);
+          const response = await apiService.getUserSettings(user.uid);
+          if (response.success && response.settings) {
+            setSettingsData(response.settings);
           } else {
             // Set default settings
             setSettingsData({
@@ -72,6 +114,18 @@ export default function ProfileSettings() {
           }
         } catch (error) {
           console.error('Error loading user settings:', error);
+          // Set default settings on error
+          setSettingsData({
+            theme: theme,
+            language: 'en',
+            emailNotifications: true,
+            pushNotifications: true,
+            marketingEmails: false,
+            weeklyDigest: true,
+            mentorshipNotifications: true,
+            projectUpdates: true,
+            communityUpdates: true,
+          });
         }
       }
     };
@@ -82,60 +136,42 @@ export default function ProfileSettings() {
   const handleProfileUpdate = async () => {
     if (!user?.uid) return;
 
-    setIsUpdating(true);
     try {
-      await updateUserProfile(user.uid, profileData);
+      // Combine firstName and lastName into displayName
+      const updates = { ...profileData };
+      if (updates.firstName || updates.lastName) {
+        updates.displayName = `${updates.firstName || ''} ${updates.lastName || ''}`.trim();
+        // Remove firstName and lastName from updates to avoid creating redundant properties
+        delete updates.firstName;
+        delete updates.lastName;
+      }
+
+      // Update profile
+      await updateProfile(user.uid, updates);
+
+      // Save interests
+      if (userInterests.length > 0) {
+        await updateInterests(user.uid, userInterests);
+      }
       
       // Log activity
-      await logUserActivity({
-        uid: user.uid,
-        action: 'profile_updated',
-        description: 'User updated their profile information',
-      });
-
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
-      });
+      await logActivity(user.uid, 'profile_updated', 'User updated their profile information');
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
     }
   };
 
   const handleSettingsUpdate = async () => {
     if (!user?.uid) return;
 
-    setIsUpdating(true);
     try {
-      await updateUserSettings(user.uid, settingsData);
+      // Update settings
+      await updateSettings(user.uid, settingsData);
       
       // Log activity
-      await logUserActivity({
-        uid: user.uid,
-        action: 'settings_updated',
-        description: 'User updated their account settings',
-      });
-
-      toast({
-        title: "Settings Updated",
-        description: "Your settings have been successfully updated.",
-      });
+      await logActivity(user.uid, 'settings_updated', 'User updated their account settings');
     } catch (error) {
       console.error('Error updating settings:', error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update settings. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
     }
   };
 
@@ -152,22 +188,13 @@ export default function ProfileSettings() {
     handleSettingsChange('theme', newTheme);
   };
 
-  const handleInterestsChange = (value: string) => {
-    const interests = value.split(',').map(item => item.trim()).filter(Boolean);
-    handleInputChange('interests', interests);
-  };
-
   const handleSkillsChange = (value: string) => {
     const skills = value.split(',').map(item => item.trim()).filter(Boolean);
     handleInputChange('skills', skills);
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner size="lg" text="Loading profile..." />;
   }
 
   return (
@@ -205,107 +232,97 @@ export default function ProfileSettings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={profileData.firstName || ''}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={profileData.lastName || ''}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={profileData.email || ''}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  disabled
+                <InputField
+                  label="First Name"
+                  id="firstName"
+                  type="text"
+                  value={profileData.firstName || ''}
+                  onChange={(value) => handleInputChange('firstName', value)}
                 />
-                <p className="text-xs text-muted-foreground">Email cannot be changed here. Contact support if needed.</p>
+                <InputField
+                  label="Last Name"
+                  id="lastName"
+                  type="text"
+                  value={profileData.lastName || ''}
+                  onChange={(value) => handleInputChange('lastName', value)}
+                />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  placeholder="Tell us about yourself..."
-                  value={profileData.bio || ''}
-                  onChange={(e) => handleInputChange('bio', e.target.value)}
-                  className="min-h-[100px]"
+              <InputField
+                label="Email"
+                id="email"
+                type="email"
+                value={profileData.email || ''}
+                onChange={(value) => handleInputChange('email', value)}
+                disabled
+                description="Email cannot be changed here. Contact support if needed."
+              />
+
+              <TextareaField
+                label="Bio"
+                id="bio"
+                value={profileData.bio || ''}
+                onChange={(value) => handleInputChange('bio', value)}
+                placeholder="Tell us about yourself..."
+                rows={4}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <InputField
+                  label="Phone"
+                  id="phone"
+                  type="tel"
+                  value={profileData.phone || ''}
+                  onChange={(value) => handleInputChange('phone', value)}
+                />
+                <InputField
+                  label="Location"
+                  id="location"
+                  type="text"
+                  value={profileData.location || ''}
+                  onChange={(value) => handleInputChange('location', value)}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={profileData.phone || ''}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={profileData.location || ''}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company</Label>
-                  <Input
-                    id="company"
-                    value={profileData.company || ''}
-                    onChange={(e) => handleInputChange('company', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="jobTitle">Job Title</Label>
-                  <Input
-                    id="jobTitle"
-                    value={profileData.jobTitle || ''}
-                    onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="interests">Interests</Label>
-                <Input
-                  id="interests"
-                  placeholder="Web Development, AI, Marketing (comma-separated)"
-                  value={profileData.interests?.join(', ') || ''}
-                  onChange={(e) => handleInterestsChange(e.target.value)}
+                <InputField
+                  label="Company"
+                  id="company"
+                  type="text"
+                  value={profileData.company || ''}
+                  onChange={(value) => handleInputChange('company', value)}
+                />
+                <InputField
+                  label="Job Title"
+                  id="jobTitle"
+                  type="text"
+                  value={profileData.jobTitle || ''}
+                  onChange={(value) => handleInputChange('jobTitle', value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="skills">Skills</Label>
-                <Input
-                  id="skills"
-                  placeholder="JavaScript, React, Python (comma-separated)"
-                  value={profileData.skills?.join(', ') || ''}
-                  onChange={(e) => handleSkillsChange(e.target.value)}
+                <label className="text-sm font-medium">Interests</label>
+                <InterestsManager
+                  userInterests={userInterests}
+                  onInterestsChange={setUserInterests}
+                  disabled={isUpdating}
+                  maxInterests={10}
                 />
               </div>
+
+              <InputField
+                label="Skills"
+                id="skills"
+                type="text"
+                value={profileData.skills?.join(', ') || ''}
+                onChange={handleSkillsChange}
+                placeholder="e.g., JavaScript, React, Python (comma-separated)"
+                description="Separate multiple skills with commas"
+              />
 
               <Button onClick={handleProfileUpdate} disabled={isUpdating}>
-                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isUpdating ? <LoadingSpinner size="sm" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Profile
               </Button>
             </CardContent>
@@ -317,45 +334,41 @@ export default function ProfileSettings() {
               <CardDescription>Add your social media and professional profiles.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  placeholder="https://yourwebsite.com"
-                  value={profileData.website || ''}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                />
-              </div>
+              <InputField
+                label="Website"
+                id="website"
+                type="url"
+                value={profileData.website || ''}
+                onChange={(value) => handleInputChange('website', value)}
+                placeholder="https://yourwebsite.com"
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="linkedinUrl">LinkedIn</Label>
-                <Input
-                  id="linkedinUrl"
-                  placeholder="https://linkedin.com/in/yourprofile"
-                  value={profileData.linkedinUrl || ''}
-                  onChange={(e) => handleInputChange('linkedinUrl', e.target.value)}
-                />
-              </div>
+              <InputField
+                label="LinkedIn"
+                id="linkedinUrl"
+                type="url"
+                value={profileData.linkedinUrl || ''}
+                onChange={(value) => handleInputChange('linkedinUrl', value)}
+                placeholder="https://linkedin.com/in/yourprofile"
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="githubUrl">GitHub</Label>
-                <Input
-                  id="githubUrl"
-                  placeholder="https://github.com/yourusername"
-                  value={profileData.githubUrl || ''}
-                  onChange={(e) => handleInputChange('githubUrl', e.target.value)}
-                />
-              </div>
+              <InputField
+                label="GitHub"
+                id="githubUrl"
+                type="url"
+                value={profileData.githubUrl || ''}
+                onChange={(value) => handleInputChange('githubUrl', value)}
+                placeholder="https://github.com/yourusername"
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="twitterUrl">Twitter</Label>
-                <Input
-                  id="twitterUrl"
-                  placeholder="https://twitter.com/yourusername"
-                  value={profileData.twitterUrl || ''}
-                  onChange={(e) => handleInputChange('twitterUrl', e.target.value)}
-                />
-              </div>
+              <InputField
+                label="Twitter"
+                id="twitterUrl"
+                type="url"
+                value={profileData.twitterUrl || ''}
+                onChange={(value) => handleInputChange('twitterUrl', value)}
+                placeholder="https://twitter.com/yourusername"
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -367,43 +380,33 @@ export default function ProfileSettings() {
               <CardDescription>Customize your account settings and preferences.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="theme">Theme</Label>
-                <Select
-                  value={theme}
-                  onValueChange={handleThemeChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select theme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                             <SelectField
+                 label="Theme"
+                 id="theme"
+                 value={theme}
+                 onValueChange={(value) => handleThemeChange(value as 'light' | 'dark' | 'system')}
+                 options={[
+                   { value: 'light', label: 'Light' },
+                   { value: 'dark', label: 'Dark' },
+                   { value: 'system', label: 'System' }
+                 ]}
+               />
 
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
-                <Select
-                  value={settingsData.language || 'en'}
-                  onValueChange={(value) => handleSettingsChange('language', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Spanish</SelectItem>
-                    <SelectItem value="fr">French</SelectItem>
-                    <SelectItem value="de">German</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <SelectField
+                label="Language"
+                id="language"
+                value={settingsData.language || 'en'}
+                onValueChange={(value) => handleSettingsChange('language', value)}
+                options={[
+                  { value: 'en', label: 'English' },
+                  { value: 'es', label: 'Spanish' },
+                  { value: 'fr', label: 'French' },
+                  { value: 'de', label: 'German' }
+                ]}
+              />
 
               <Button onClick={handleSettingsUpdate} disabled={isUpdating}>
-                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isUpdating ? <LoadingSpinner size="sm" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Settings
               </Button>
             </CardContent>
@@ -417,60 +420,46 @@ export default function ProfileSettings() {
               <CardDescription>Control who can see your information and how it's displayed.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="profileVisibility">Profile Visibility</Label>
-                <Select
-                  value={profileData.profileVisibility || 'public'}
-                  onValueChange={(value) => handleInputChange('profileVisibility', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select visibility" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="public">Public</SelectItem>
-                    <SelectItem value="members-only">Members Only</SelectItem>
-                    <SelectItem value="private">Private</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <SelectField
+                label="Profile Visibility"
+                id="profileVisibility"
+                value={profileData.profileVisibility || 'public'}
+                onValueChange={(value) => handleInputChange('profileVisibility', value)}
+                options={[
+                  { value: 'public', label: 'Public' },
+                  { value: 'members-only', label: 'Members Only' },
+                  { value: 'private', label: 'Private' }
+                ]}
+              />
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Show Email</Label>
-                    <p className="text-sm text-muted-foreground">Allow others to see your email address</p>
-                  </div>
-                  <Switch
-                    checked={profileData.showEmail || false}
-                    onCheckedChange={(checked) => handleInputChange('showEmail', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Show Email"
+                  id="showEmail"
+                  checked={profileData.showEmail || false}
+                  onCheckedChange={(checked) => handleInputChange('showEmail', checked)}
+                  description="Allow others to see your email address"
+                />
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Show Phone</Label>
-                    <p className="text-sm text-muted-foreground">Allow others to see your phone number</p>
-                  </div>
-                  <Switch
-                    checked={profileData.showPhone || false}
-                    onCheckedChange={(checked) => handleInputChange('showPhone', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Show Phone"
+                  id="showPhone"
+                  checked={profileData.showPhone || false}
+                  onCheckedChange={(checked) => handleInputChange('showPhone', checked)}
+                  description="Allow others to see your phone number"
+                />
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Show Location</Label>
-                    <p className="text-sm text-muted-foreground">Allow others to see your location</p>
-                  </div>
-                  <Switch
-                    checked={profileData.showLocation || true}
-                    onCheckedChange={(checked) => handleInputChange('showLocation', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Show Location"
+                  id="showLocation"
+                  checked={profileData.showLocation || true}
+                  onCheckedChange={(checked) => handleInputChange('showLocation', checked)}
+                  description="Allow others to see your location"
+                />
               </div>
 
               <Button onClick={handleProfileUpdate} disabled={isUpdating}>
-                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isUpdating ? <LoadingSpinner size="sm" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Privacy Settings
               </Button>
             </CardContent>
@@ -485,86 +474,65 @@ export default function ProfileSettings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive notifications via email</p>
-                  </div>
-                  <Switch
-                    checked={settingsData.emailNotifications || true}
-                    onCheckedChange={(checked) => handleSettingsChange('emailNotifications', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Email Notifications"
+                  id="emailNotifications"
+                  checked={settingsData.emailNotifications || true}
+                  onCheckedChange={(checked) => handleSettingsChange('emailNotifications', checked)}
+                  description="Receive notifications via email"
+                />
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Push Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive push notifications in your browser</p>
-                  </div>
-                  <Switch
-                    checked={settingsData.pushNotifications || true}
-                    onCheckedChange={(checked) => handleSettingsChange('pushNotifications', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Push Notifications"
+                  id="pushNotifications"
+                  checked={settingsData.pushNotifications || true}
+                  onCheckedChange={(checked) => handleSettingsChange('pushNotifications', checked)}
+                  description="Receive push notifications in your browser"
+                />
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Marketing Emails</Label>
-                    <p className="text-sm text-muted-foreground">Receive promotional and marketing emails</p>
-                  </div>
-                  <Switch
-                    checked={settingsData.marketingEmails || false}
-                    onCheckedChange={(checked) => handleSettingsChange('marketingEmails', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Marketing Emails"
+                  id="marketingEmails"
+                  checked={settingsData.marketingEmails || false}
+                  onCheckedChange={(checked) => handleSettingsChange('marketingEmails', checked)}
+                  description="Receive promotional and marketing emails"
+                />
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Weekly Digest</Label>
-                    <p className="text-sm text-muted-foreground">Receive a weekly summary of platform activity</p>
-                  </div>
-                  <Switch
-                    checked={settingsData.weeklyDigest || true}
-                    onCheckedChange={(checked) => handleSettingsChange('weeklyDigest', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Weekly Digest"
+                  id="weeklyDigest"
+                  checked={settingsData.weeklyDigest || true}
+                  onCheckedChange={(checked) => handleSettingsChange('weeklyDigest', checked)}
+                  description="Receive a weekly summary of platform activity"
+                />
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Mentorship Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Get notified about mentorship opportunities</p>
-                  </div>
-                  <Switch
-                    checked={settingsData.mentorshipNotifications || true}
-                    onCheckedChange={(checked) => handleSettingsChange('mentorshipNotifications', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Mentorship Notifications"
+                  id="mentorshipNotifications"
+                  checked={settingsData.mentorshipNotifications || true}
+                  onCheckedChange={(checked) => handleSettingsChange('mentorshipNotifications', checked)}
+                  description="Get notified about mentorship opportunities"
+                />
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Project Updates</Label>
-                    <p className="text-sm text-muted-foreground">Receive updates about your projects</p>
-                  </div>
-                  <Switch
-                    checked={settingsData.projectUpdates || true}
-                    onCheckedChange={(checked) => handleSettingsChange('projectUpdates', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Project Updates"
+                  id="projectUpdates"
+                  checked={settingsData.projectUpdates || true}
+                  onCheckedChange={(checked) => handleSettingsChange('projectUpdates', checked)}
+                  description="Receive updates about your projects"
+                />
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Community Updates</Label>
-                    <p className="text-sm text-muted-foreground">Stay updated with community news and events</p>
-                  </div>
-                  <Switch
-                    checked={settingsData.communityUpdates || true}
-                    onCheckedChange={(checked) => handleSettingsChange('communityUpdates', checked)}
-                  />
-                </div>
+                <SwitchField
+                  label="Community Updates"
+                  id="communityUpdates"
+                  checked={settingsData.communityUpdates || true}
+                  onCheckedChange={(checked) => handleSettingsChange('communityUpdates', checked)}
+                  description="Stay updated with community news and events"
+                />
               </div>
 
               <Button onClick={handleSettingsUpdate} disabled={isUpdating}>
-                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isUpdating ? <LoadingSpinner size="sm" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Notification Settings
               </Button>
             </CardContent>
