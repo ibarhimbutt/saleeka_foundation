@@ -1,14 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-// FIREBASE IMPORTS COMMENTED OUT - NOW USING NEO4J
-// import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-// import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-// import { auth, db } from '@/lib/firebase';
-
-// Import Neo4j authentication
-import { createUserWithEmailAndPassword, updateUserPassword, updateProfile } from '@/lib/apiAuth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,12 +11,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import Link from 'next/link';
-import { UserPlus, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Sparkles, X, Plus } from 'lucide-react';
 import type { UserProfile, UserType } from '@/lib/firestoreTypes';
 import AiImage from '@/components/shared/AiImage';
+
+interface Interest {
+  name: string;
+  category: string;
+  description: string;
+  popularity: number;
+}
 
 type SignupFormData = {
   firstName: string;
@@ -30,7 +33,7 @@ type SignupFormData = {
   password: string;
   confirmPassword: string;
   userType: UserType;
-  interests: string;
+  interests: Interest[];
   bio: string;
   agreeToTerms: boolean;
   subscribeNewsletter: boolean;
@@ -44,7 +47,7 @@ export default function SignupPage() {
     password: '',
     confirmPassword: '',
     userType: 'unclassified',
-    interests: '',
+    interests: [],
     bio: '',
     agreeToTerms: false,
     subscribeNewsletter: false,
@@ -54,36 +57,71 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Password update state
-  const [updateEmail, setUpdateEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-  const [passwordUpdateMessage, setPasswordUpdateMessage] = useState('');
+  // Interests state
+  const [availableInterests, setAvailableInterests] = useState<Interest[]>([]);
+  const [selectedInterest, setSelectedInterest] = useState<string>('');
+  const [loadingInterests, setLoadingInterests] = useState(false);
   
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleInputChange = (field: keyof SignupFormData, value: string | boolean) => {
+  // Load available interests
+  useEffect(() => {
+    const loadInterests = async () => {
+      setLoadingInterests(true);
+      try {
+        const response = await fetch('/api/interests');
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableInterests(data.interests || []);
+        }
+      } catch (error) {
+        console.error('Error loading interests:', error);
+      } finally {
+        setLoadingInterests(false);
+      }
+    };
+
+    loadInterests();
+  }, []);
+
+  const handleInputChange = (field: keyof SignupFormData, value: string | boolean | Interest[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (error) setError(null);
   };
 
-  const handlePasswordUpdate = async () => {
-    if (!updateEmail || !newPassword) return;
-    
-    setIsUpdatingPassword(true);
-    setPasswordUpdateMessage('');
-    
-    try {
-      await updateUserPassword(updateEmail, newPassword);
-      setPasswordUpdateMessage('Password updated successfully!');
-      setUpdateEmail('');
-      setNewPassword('');
-    } catch (error) {
-      setPasswordUpdateMessage(`Error updating password: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsUpdatingPassword(false);
+  // Add interest to form
+  const addInterest = (interestName: string) => {
+    const interest = availableInterests.find(i => i.name === interestName);
+    if (interest && !formData.interests.some(i => i.name === interest.name)) {
+      setFormData(prev => {
+        const newInterests = [...prev.interests, interest];
+        // Remove any duplicates that might exist
+        const uniqueInterests = newInterests.filter((item, index, self) => 
+          index === self.findIndex(i => i.name === item.name)
+        );
+        return {
+          ...prev,
+          interests: uniqueInterests
+        };
+      });
+      setSelectedInterest('');
+    } else if (interest && formData.interests.some(i => i.name === interest.name)) {
+      // Show toast for duplicate interest
+      toast({
+        title: "Interest Already Added",
+        description: `${interest.name} is already in your interests.`,
+        variant: "destructive",
+      });
     }
+  };
+
+  // Remove interest from form
+  const removeInterest = (interestName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      interests: prev.interests.filter(i => i.name !== interestName)
+    }));
   };
 
   const validateForm = (): string | null => {
@@ -115,22 +153,64 @@ export default function SignupPage() {
     setError(null);
 
     try {
-      // Create user with Neo4j Auth
+      // Check if auth is available
+      if (!auth) {
+        throw new Error('Firebase auth is not initialized');
+      }
+
+      // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
+        auth,
         formData.email,
-        formData.password,
-        `${formData.firstName} ${formData.lastName}`,
-        formData.userType
+        formData.password
       );
 
       const user = userCredential.user;
       const displayName = `${formData.firstName} ${formData.lastName}`;
 
-      // Update user profile with additional information
-      // Note: Neo4j auth already creates the user profile, so we just update additional fields
-      if (formData.interests || formData.bio || formData.subscribeNewsletter) {
-        // Additional profile updates can be done here if needed
-        // For now, the basic profile is created during user creation
+      // Update Firebase user profile
+      await updateProfile(user, { displayName });
+
+      // Create user profile in Neo4j via API route
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uid: user.uid,
+          email: user.email,
+          displayName,
+          userType: formData.userType,
+          interests: formData.interests.map(i => i.name), // Send interest names
+          bio: formData.bio,
+          subscribeNewsletter: formData.subscribeNewsletter,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create user profile');
+      }
+
+      // Add interests to user (create relationships)
+      for (const interest of formData.interests) {
+        try {
+          await fetch('/api/user/interests', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              uid: user.uid,
+              interestName: interest.name,
+              category: interest.category,
+              description: interest.description,
+            }),
+          });
+        } catch (error) {
+          console.warn('Failed to add interest:', interest.name, error);
+          // Continue with other interests even if one fails
+        }
       }
 
       toast({
@@ -149,11 +229,11 @@ export default function SignupPage() {
       console.error("Signup error:", err);
       let errorMessage = "Failed to create account. Please try again.";
       
-      if (err.message === 'auth/email-already-in-use') {
+      if (err.code === 'auth/email-already-in-use') {
         errorMessage = "An account with this email already exists.";
-      } else if (err.message === 'auth/weak-password') {
+      } else if (err.code === 'auth/weak-password') {
         errorMessage = "Password is too weak. Please choose a stronger password.";
-      } else if (err.message === 'auth/invalid-email') {
+      } else if (err.code === 'auth/invalid-email') {
         errorMessage = "Please enter a valid email address.";
       }
       
@@ -344,7 +424,7 @@ export default function SignupPage() {
                   <SelectTrigger>
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" side="bottom" align="start">
                     <SelectItem value="student">Student</SelectItem>
                     <SelectItem value="professional">Professional/Mentor</SelectItem>
                     <SelectItem value="orgadmin">Organization Representative</SelectItem>
@@ -354,17 +434,57 @@ export default function SignupPage() {
               </div>
 
               {/* Interests */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label htmlFor="interests">Interests/Skills (optional)</Label>
-                <Input
-                  id="interests"
-                  type="text"
-                  placeholder="e.g., Web Development, AI, Marketing, Design"
-                  value={formData.interests}
-                  onChange={(e) => handleInputChange('interests', e.target.value)}
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-muted-foreground">Separate multiple interests with commas</p>
+                
+                {/* Interest Selection Dropdown - Fixed Position */}
+                <div className="relative">
+                  {availableInterests.length > 0 && (
+                    <Select
+                      value={selectedInterest}
+                      onValueChange={(value) => addInterest(value)}
+                      disabled={loadingInterests || formData.interests.length >= 5} // Limit to 5 interests
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Add Interest" />
+                      </SelectTrigger>
+                      <SelectContent position="popper" side="bottom" align="start">
+                        {availableInterests.map((interest) => (
+                          <SelectItem key={interest.name} value={interest.name}>
+                            {interest.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Selected Interests Display - Below Dropdown */}
+                {formData.interests.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Your Interests:</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formData.interests.length}/5
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.interests.map((interest) => (
+                        <Badge key={interest.name} variant="secondary" className="flex items-center gap-1">
+                          {interest.name}
+                          <X 
+                            className="ml-1 h-3 w-3 cursor-pointer hover:text-destructive" 
+                            onClick={() => removeInterest(interest.name)} 
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Select an interest from the dropdown above to add it. You can add up to 5 interests.
+                </p>
               </div>
 
               {/* Bio */}
@@ -425,57 +545,6 @@ export default function SignupPage() {
                 {isLoading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
-
-            {/* Temporary Password Update Section */}
-            <div className="mt-6 p-4 border border-orange-200 bg-orange-50 rounded-lg">
-              <h3 className="text-sm font-medium text-orange-800 mb-3">
-                🔧 Temporary Password Update Tool (For Testing)
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="updateEmail" className="text-xs text-orange-700">
-                    Email to update:
-                  </Label>
-                  <Input
-                    id="updateEmail"
-                    type="email"
-                    placeholder="user@example.com"
-                    value={updateEmail}
-                    onChange={(e) => setUpdateEmail(e.target.value)}
-                    className="text-sm"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="newPassword" className="text-xs text-orange-700">
-                    New password:
-                  </Label>
-                  <Input
-                    id="newPassword"
-                    type="text"
-                    placeholder="Enter new password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="text-sm"
-                  />
-                </div>
-                <Button
-                  onClick={handlePasswordUpdate}
-                  disabled={!updateEmail || !newPassword || isUpdatingPassword}
-                  className="w-full text-xs bg-orange-600 hover:bg-orange-700 text-white"
-                >
-                  {isUpdatingPassword ? 'Updating...' : 'Update Password'}
-                </Button>
-                {passwordUpdateMessage && (
-                  <div className={`text-xs p-2 rounded ${
-                    passwordUpdateMessage.includes('successfully') 
-                      ? 'bg-green-100 text-green-800 border border-green-200' 
-                      : 'bg-red-100 text-red-800 border border-red-200'
-                  }`}>
-                    {passwordUpdateMessage}
-                  </div>
-                )}
-              </div>
-            </div>
           </CardContent>
           
           <CardFooter className="text-center">

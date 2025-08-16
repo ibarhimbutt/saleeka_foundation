@@ -38,19 +38,18 @@ export class Neo4jUserService {
     
     // Map user type to proper Neo4j node label
     const getNodeLabel = (type: string) => {
-      switch (type) {
+      switch (type.toLowerCase()) {
         case 'student':
-          return 'Student';
+          return 'User'; // Use single 'User' label for all users
         case 'mentor':
-          return 'Mentor';
         case 'professional':
-          return 'Professional';
+          return 'User'; // Use single 'User' label for all users
         case 'admin':
-          return 'Admin';
+          return 'User'; // Use single 'User' label for all users
         case 'donor':
-          return 'Donor';
+          return 'User'; // Use single 'User' label for all users
         default:
-          return 'Student';
+          return 'User'; // Use single 'User' label for all users
       }
     };
     
@@ -62,8 +61,6 @@ export class Neo4jUserService {
         email: $email,
         password: $password,
         displayName: $displayName,
-        firstName: $firstName,
-        lastName: $lastName,
         photoURL: $photoURL,
         bio: $bio,
         phone: $phone,
@@ -98,9 +95,7 @@ export class Neo4jUserService {
       uid: userData.uid || '',
       email: userData.email || '',
       password: userData.password || null,
-      displayName: userData.displayName || null,
-      firstName: userData.firstName || null,
-      lastName: userData.lastName || null,
+      displayName: userData.displayName || '',
       photoURL: userData.photoURL || null,
       bio: userData.bio || null,
       phone: userData.phone || null,
@@ -264,7 +259,26 @@ export class Neo4jUserService {
   // Update user profile
   static async updateUserProfile(uid: string, updates: Partial<StudentNode | MentorNode | ProfessionalNode | AdminNode | DonorNode>): Promise<void> {
     const now = new Date().toISOString();
-    const setClause = Object.keys(updates)
+    
+    // Handle name updates - combine firstName and lastName into displayName
+    let processedUpdates = { ...updates };
+    if (updates.firstName || updates.lastName) {
+      const currentUser = await this.getUserByUid(uid);
+      const currentFirstName = currentUser?.firstName || '';
+      const currentLastName = currentUser?.lastName || '';
+      
+      const newFirstName = updates.firstName || currentFirstName;
+      const newLastName = updates.lastName || currentLastName;
+      
+      // Combine into displayName
+      processedUpdates.displayName = `${newFirstName} ${newLastName}`.trim();
+      
+      // Remove firstName and lastName from updates to avoid creating new properties
+      delete processedUpdates.firstName;
+      delete processedUpdates.lastName;
+    }
+    
+    const setClause = Object.keys(processedUpdates)
       .map(key => `u.${key} = $${key}`)
       .join(', ');
 
@@ -278,7 +292,7 @@ export class Neo4jUserService {
       SET ${setClause}, u.updatedAt = $updatedAt
     `;
 
-    await executeWrite(query, { uid, ...updates, updatedAt: now });
+    await executeWrite(query, { uid, ...processedUpdates, updatedAt: now });
   }
 
   // Delete user
@@ -762,14 +776,18 @@ export class Neo4jActivityService {
 
   // Get user activity
   static async getUserActivity(uid: string, limit: number = 10): Promise<ActivityNode[]> {
+    // Ensure limit is a valid integer
+    const intLimit = Math.floor(Number(limit)) || 10;
+    
+    // Build query with limit as a literal to avoid type conversion issues
     const query = `
       MATCH (u:User {uid: $uid})-[:HAS_ACTIVITY]->(a:Activity)
       RETURN a
       ORDER BY a.createdAt DESC
-      LIMIT $limit
+      LIMIT ${intLimit}
     `;
 
-    const result = await executeRead(query, { uid, limit: Math.floor(limit) });
+    const result = await executeRead(query, { uid });
     return result.map((record: unknown) => {
       const activity = (record as { [key: string]: any }).a;
       return activity && activity.properties ? activity.properties : activity;

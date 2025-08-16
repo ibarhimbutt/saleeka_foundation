@@ -38,7 +38,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'UID and updates are required' }, { status: 400 });
     }
 
-    const updatedUser = await Neo4jUserService.updateUser(uid, updates);
+    await Neo4jUserService.updateUserProfile(uid, updates);
+    
+    // Get the updated user profile
+    const updatedUser = await Neo4jUserService.getUserByUid(uid);
     
     if (!updatedUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });

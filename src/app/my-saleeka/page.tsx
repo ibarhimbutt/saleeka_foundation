@@ -7,7 +7,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Loader2, UserCircle, Briefcase, Settings, Users, Activity, Calendar, BookOpen } from 'lucide-react';
-import { formatTimestamp } from '@/lib/firestore';
+
+// Utility function to format timestamp
+const formatTimestamp = (timestamp: any): string => {
+  if (!timestamp) return 'Unknown';
+  
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString();
+  } catch (error) {
+    return 'Invalid date';
+  }
+};
 
 export default function MySaleekaPage() {
   const { user, userProfile, loading } = useAuth();
