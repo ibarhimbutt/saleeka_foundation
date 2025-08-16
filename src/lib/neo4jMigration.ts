@@ -315,6 +315,55 @@ export class Neo4jMigrationService {
     }
   }
 
+  // Create sample activities for an existing user
+  static async createSampleActivitiesForUser(uid: string): Promise<void> {
+    try {
+      console.log(`🌱 Creating sample activities for user: ${uid}`);
+      
+      const sampleActivities = [
+        {
+          action: 'profile_updated',
+          description: 'Updated profile information',
+          metadata: { fields: ['bio', 'location', 'skills'] }
+        },
+        {
+          action: 'program_viewed',
+          description: 'Viewed Tech Mentorship Program details',
+          metadata: { program: 'Tech Mentorship Program', category: 'Mentorship' }
+        },
+        {
+          action: 'skill_updated',
+          description: 'Updated skill level for JavaScript',
+          metadata: { skill: 'JavaScript', oldLevel: 'beginner', newLevel: 'intermediate' }
+        },
+        {
+          action: 'mentorship_requested',
+          description: 'Sent mentorship request to Sample Mentor',
+          metadata: { mentor: 'Sample Mentor', status: 'pending' }
+        },
+        {
+          action: 'community_joined',
+          description: 'Joined Technology Innovation community',
+          metadata: { community: 'Technology Innovation', members: 150 }
+        }
+      ];
+
+      for (const activity of sampleActivities) {
+        await Neo4jActivityService.logUserActivity({
+          uid,
+          ...activity,
+          ipAddress: '127.0.0.1',
+          userAgent: 'Sample Data Generator'
+        });
+      }
+
+      console.log(`✅ Created ${sampleActivities.length} sample activities for user: ${uid}`);
+    } catch (error) {
+      console.error(`❌ Error creating sample activities for user ${uid}:`, error);
+      throw error;
+    }
+  }
+
   // Run all tests
   static async runAllTests(): Promise<void> {
     try {

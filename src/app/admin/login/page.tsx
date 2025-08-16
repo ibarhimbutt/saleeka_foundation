@@ -2,12 +2,8 @@
 
 import { useState, type FormEvent, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-// FIREBASE IMPORTS COMMENTED OUT - NOW USING NEO4J
-// import { signInWithEmailAndPassword } from 'firebase/auth';
-// import { auth } from '@/lib/firebase'; // Client-side Firebase auth
-
-// Import Neo4j authentication
-import { signInWithEmailAndPassword, getUserProfile } from '@/lib/apiAuth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
-import { createSession } from '@/lib/neo4jAuth';
 import type { UserProfile } from '@/lib/firestoreTypes';
 
 // Utility function to convert Neo4j node to UserProfile
@@ -148,27 +143,78 @@ function AdminLoginForm() {
     setError(null);
 
     try {
+      // Check if auth is available
+      if (!auth) {
+        throw new Error('Firebase auth is not initialized');
+      }
+
       console.log('Attempting login with email:', email);
-      const result = await signInWithEmailAndPassword(email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
       console.log('Login successful, result:', result);
       
       // Set the user in the auth context
       console.log('Setting user in auth context:', result.user);
-      setUser(result.user);
+      setUser({
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.displayName,
+        emailVerified: result.user.emailVerified,
+        isAnonymous: result.user.isAnonymous,
+      });
       
-      // Create a session token and store it
-      const sessionToken = createSession(result.user);
-      console.log('Created session token:', sessionToken);
-      localStorage.setItem('neo4j_session_token', sessionToken);
-      
-      // Fetch the actual user profile from API
-      console.log('Fetching user profile from API...');
-      const fetchedUserProfile = await getUserProfile(result.user.email);
-      console.log('Fetched user profile:', fetchedUserProfile);
-      if (fetchedUserProfile) {
-        const convertedProfile = convertNeo4jNodeToUserProfile(fetchedUserProfile);
-        console.log('Converted profile:', convertedProfile);
-        setUserProfile(convertedProfile);
+      // Fetch the user profile from Neo4j
+      console.log('Fetching user profile from Neo4j...');
+      try {
+        const response = await fetch(`/api/auth/profile?uid=${encodeURIComponent(result.user.uid)}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            const convertedProfile = convertNeo4jNodeToUserProfile(data.user);
+            console.log('Converted profile:', convertedProfile);
+            setUserProfile(convertedProfile);
+          } else {
+            // If no profile exists in Neo4j, create a basic one
+            const basicProfile: UserProfile = {
+              uid: result.user.uid,
+              email: result.user.email || '',
+              displayName: result.user.displayName || '',
+              role: 'viewer' as any,
+              type: 'student' as any,
+              createdAt: new Date() as any,
+              isActive: true,
+              isVerified: result.user.emailVerified,
+            };
+            setUserProfile(basicProfile);
+          }
+        } else {
+          // If API call fails, create a basic profile
+          const basicProfile: UserProfile = {
+            uid: result.user.uid,
+            email: result.user.email || '',
+            displayName: result.user.displayName || '',
+            role: 'viewer' as any,
+            type: 'student' as any,
+            createdAt: new Date() as any,
+            isActive: true,
+            isVerified: result.user.emailVerified,
+          };
+          setUserProfile(basicProfile);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile from Neo4j:', error);
+        // Set basic profile if Neo4j fetch fails
+        const basicProfile: UserProfile = {
+          uid: result.user.uid,
+          email: result.user.email || '',
+          displayName: result.user.displayName || '',
+          role: 'viewer' as any,
+          type: 'student' as any,
+          createdAt: new Date() as any,
+          isActive: true,
+          isVerified: result.user.emailVerified,
+        };
+        setUserProfile(basicProfile);
       }
       
       toast({
@@ -177,11 +223,11 @@ function AdminLoginForm() {
       });
       // Redirect will be handled by the useEffect above
     } catch (err: any) {
-      console.error("Neo4j login error:", err);
+      console.error("Firebase login error:", err);
       let errorMessage = "Failed to login. Please check your credentials.";
-      if (err.message === 'auth/user-not-found' || err.message === 'auth/wrong-password' || err.message === 'auth/invalid-credential') {
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password.";
-      } else if (err.message === 'auth/invalid-email') {
+      } else if (err.code === 'auth/invalid-email') {
         errorMessage = "Please enter a valid email address.";
       }
       setError(errorMessage);

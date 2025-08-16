@@ -2,17 +2,21 @@
 
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
-// FIREBASE IMPORTS COMMENTED OUT - NOW USING NEO4J
-// import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
-// import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-// import { auth, db } from '@/lib/firebase'; // Client-side Firebase auth and db
-
-// Import Neo4j authentication
-import { signOut, getCurrentUser, validateSession } from '@/lib/neo4jAuth';
-import type { AuthUser } from '@/lib/neo4jAuth';
+import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import type { UserProfile, UserRole, UserType } from '@/lib/firestoreTypes';
-import { Neo4jUserService } from '@/lib/neo4jService';
+
+// Utility function to convert Firebase User to AuthUser
+const convertFirebaseUserToAuthUser = (firebaseUser: User): any => {
+  return {
+    uid: firebaseUser.uid,
+    email: firebaseUser.email,
+    displayName: firebaseUser.displayName,
+    emailVerified: firebaseUser.emailVerified,
+    isAnonymous: firebaseUser.isAnonymous,
+  };
+};
 
 // Utility function to convert Neo4j node to UserProfile
 const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
@@ -93,80 +97,116 @@ const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
 };
 
 interface AuthContextType {
-  user: AuthUser | null;
-  userProfile: UserProfile | null; // To store Neo4j profile data including role and type
+  user: any | null;
+  userProfile: UserProfile | null;
   loading: boolean;
   logout: () => Promise<void>;
-  setUser: (user: AuthUser | null) => void;
+  setUser: (user: any | null) => void;
   setUserProfile: (profile: UserProfile | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Check for existing session token in localStorage
-    const checkSession = async () => {
+    // Check if auth is available
+    if (!auth) {
+      console.error('Firebase auth is not initialized');
+      setLoading(false);
+      return;
+    }
+
+    // Set up Firebase auth state listener
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       try {
-        const sessionToken = localStorage.getItem('neo4j_session_token');
-        if (sessionToken) {
-          const session = validateSession(sessionToken);
-          if (session) {
-            // Session is valid, get current user
-            const currentUser = await getCurrentUser();
-            if (currentUser) {
-              setUser(currentUser);
-              // Fetch user profile from Neo4j
-              const profile = await Neo4jUserService.getUserByUid(currentUser.uid);
-              if (profile) {
-                const convertedProfile = convertNeo4jNodeToUserProfile(profile);
+        if (firebaseUser) {
+          // User is signed in
+          const authUser = convertFirebaseUserToAuthUser(firebaseUser);
+          setUser(authUser);
+          
+          // Fetch user profile from Neo4j
+          try {
+            const response = await fetch(`/api/auth/profile?uid=${encodeURIComponent(firebaseUser.uid)}`);
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success && data.user) {
+                const convertedProfile = convertNeo4jNodeToUserProfile(data.user);
                 setUserProfile(convertedProfile);
               } else {
-                // Fallback to basic profile if profile not found
+                // If no profile exists in Neo4j, create a basic one
                 const basicProfile: UserProfile = {
-                  uid: currentUser.uid,
-                  email: currentUser.email,
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email || '',
+                  displayName: firebaseUser.displayName || '',
                   role: 'viewer' as UserRole,
                   type: 'student' as UserType,
                   createdAt: new Date() as any,
+                  isActive: true,
+                  isVerified: firebaseUser.emailVerified,
                 };
                 setUserProfile(basicProfile);
               }
+            } else {
+              // If API call fails, create a basic profile
+              const basicProfile: UserProfile = {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email || '',
+                displayName: firebaseUser.displayName || '',
+                role: 'viewer' as UserRole,
+                type: 'student' as UserType,
+                createdAt: new Date() as any,
+                isActive: true,
+                isVerified: firebaseUser.emailVerified,
+              };
+              setUserProfile(basicProfile);
             }
-          } else {
-            // Invalid session, clear token
-            localStorage.removeItem('neo4j_session_token');
-            setUser(null);
-            setUserProfile(null);
+          } catch (error) {
+            console.error('Error fetching user profile from Neo4j:', error);
+            // Set basic profile if Neo4j fetch fails
+            const basicProfile: UserProfile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              displayName: firebaseUser.displayName || '',
+              role: 'viewer' as UserRole,
+              type: 'student' as UserType,
+              createdAt: new Date() as any,
+              isActive: true,
+              isVerified: firebaseUser.emailVerified,
+            };
+            setUserProfile(basicProfile);
           }
         } else {
+          // User is signed out
           setUser(null);
           setUserProfile(null);
         }
       } catch (error) {
-        console.error('Error checking session:', error);
+        console.error('Error in auth state change:', error);
         setUser(null);
         setUserProfile(null);
       } finally {
         setLoading(false);
       }
-    };
+    });
 
-    checkSession();
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   const logout = async () => {
     setLoading(true);
     try {
-      await signOut();
-      // Clear session token
-      localStorage.removeItem('neo4j_session_token');
+      if (!auth) {
+        throw new Error('Firebase auth is not initialized');
+      }
+      await firebaseSignOut(auth);
       setUser(null);
       setUserProfile(null);
       router.push('/'); // Redirect to home page
@@ -177,7 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const setUserValue = (user: AuthUser | null) => {
+  const setUserValue = (user: any | null) => {
     console.log('AuthContext setUser called with:', user);
     setUser(user);
   };
