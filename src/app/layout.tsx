@@ -19,7 +19,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: 'Saleeka Connect - Empowering Futures',
-  description: 'Connecting Students, Professionals, Organizations, and Donors for a brighter future. The Saleeka Way.',
+  description: 'Connecting Students, Mentors, Organizations, and Donors for a brighter future. The Saleeka Way.',
 };
 
 export default function RootLayout({

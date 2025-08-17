@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { sampleStudentProfiles, sampleProfessionalProfiles, sampleOrganizationProfiles, sampleDonorProfiles } from "@/lib/constants";
+import { sampleStudentProfiles, sampleMentorProfiles, sampleOrganizationProfiles, sampleDonorProfiles } from "@/lib/constants";
 import { Users, Briefcase, Building2, Heart } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 export default function AdminDashboardPage() {
   const stats = [
     { title: "Total Students", value: sampleStudentProfiles.length, icon: Users, color: "text-blue-500", href: "/admin/students" },
-    { title: "Total Professionals", value: sampleProfessionalProfiles.length, icon: Briefcase, color: "text-green-500", href: "/admin/professionals" },
+    { title: "Total Mentors", value: sampleMentorProfiles.length, icon: Briefcase, color: "text-green-500", href: "/admin/mentors" },
     { title: "Total Organizations", value: sampleOrganizationProfiles.length, icon: Building2, color: "text-purple-500", href: "/admin/organizations" },
     { title: "Total Donors", value: sampleDonorProfiles.length, icon: Heart, color: "text-red-500", href: "/admin/donors" },
   ];

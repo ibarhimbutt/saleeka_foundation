@@ -27,7 +27,6 @@ const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
         return 'superAdmin';
       case 'student':
       case 'mentor':
-      case 'professional':
       case 'donor':
         return 'viewer';
       default:
@@ -43,8 +42,7 @@ const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
       case 'student':
         return 'student';
       case 'mentor':
-      case 'professional':
-        return 'professional';
+        return 'mentor';
       case 'donor':
         return 'donor';
       case 'orgadmin':
@@ -73,7 +71,6 @@ const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
     twitterUrl: neo4jNode.twitterUrl,
     company: neo4jNode.company,
     jobTitle: neo4jNode.jobTitle,
-    skills: neo4jNode.skills,
     experience: neo4jNode.experience,
     education: neo4jNode.education,
     subscribeNewsletter: neo4jNode.subscribeNewsletter,
@@ -110,7 +107,7 @@ function AdminLoginForm() {
       console.log('Conditions met for redirect');
       
       // Determine where to redirect based on user type and role
-      const isAdmin = userProfile.type === 'admin' || userProfile.role === 'superAdmin' || userProfile.role === 'editor';
+      const isAdmin = userProfile.type === 'admin';
       console.log('User is admin:', isAdmin, 'userProfile.type:', userProfile.type, 'userProfile.role:', userProfile.role);
       
       if (isAdmin) {
@@ -179,11 +176,20 @@ function AdminLoginForm() {
               uid: result.user.uid,
               email: result.user.email || '',
               displayName: result.user.displayName || '',
-              role: 'viewer' as any,
+              role: 'student' as any,
               type: 'student' as any,
               createdAt: new Date() as any,
+              updatedAt: new Date() as any,
               isActive: true,
               isVerified: result.user.emailVerified,
+              subscribeNewsletter: false,
+              emailNotifications: true,
+              pushNotifications: false,
+              marketingEmails: false,
+              profileVisibility: 'public',
+              showEmail: false,
+              showPhone: false,
+              showLocation: true,
             };
             setUserProfile(basicProfile);
           }
@@ -193,11 +199,20 @@ function AdminLoginForm() {
             uid: result.user.uid,
             email: result.user.email || '',
             displayName: result.user.displayName || '',
-            role: 'viewer' as any,
+            role: 'student' as any,
             type: 'student' as any,
             createdAt: new Date() as any,
+            updatedAt: new Date() as any,
             isActive: true,
             isVerified: result.user.emailVerified,
+            subscribeNewsletter: false,
+            emailNotifications: true,
+            pushNotifications: false,
+            marketingEmails: false,
+            profileVisibility: 'public',
+            showEmail: false,
+            showPhone: false,
+            showLocation: true,
           };
           setUserProfile(basicProfile);
         }
@@ -208,11 +223,20 @@ function AdminLoginForm() {
           uid: result.user.uid,
           email: result.user.email || '',
           displayName: result.user.displayName || '',
-          role: 'viewer' as any,
+          role: 'student' as any,
           type: 'student' as any,
           createdAt: new Date() as any,
+          updatedAt: new Date() as any,
           isActive: true,
           isVerified: result.user.emailVerified,
+          subscribeNewsletter: false,
+          emailNotifications: true,
+          pushNotifications: false,
+          marketingEmails: false,
+          profileVisibility: 'public',
+          showEmail: false,
+          showPhone: false,
+          showLocation: true,
         };
         setUserProfile(basicProfile);
       }

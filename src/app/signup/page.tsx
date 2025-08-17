@@ -37,6 +37,7 @@ type SignupFormData = {
   bio: string;
   agreeToTerms: boolean;
   subscribeNewsletter: boolean;
+  mentorCategory?: string; // Added for mentor user type
 };
 
 export default function SignupPage() {
@@ -51,6 +52,7 @@ export default function SignupPage() {
     bio: '',
     agreeToTerms: false,
     subscribeNewsletter: false,
+    mentorCategory: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -124,6 +126,18 @@ export default function SignupPage() {
     }));
   };
 
+  // Categories for mentors (same as StudentHomepage)
+  const mentorCategories = [
+    'Software Engineering',
+    'Data Science',
+    'Product Management',
+    'Marketing',
+    'Design',
+    'Business',
+    'Healthcare',
+    'Education'
+  ];
+
   const validateForm = (): string | null => {
     if (!formData.firstName.trim()) return "First name is required";
     if (!formData.lastName.trim()) return "Last name is required";
@@ -131,7 +145,8 @@ export default function SignupPage() {
     if (!formData.password) return "Password is required";
     if (formData.password.length < 6) return "Password must be at least 6 characters";
     if (formData.password !== formData.confirmPassword) return "Passwords do not match";
-    if (formData.userType === 'unclassified') return "Please select your role";
+    if (formData.userType === 'unclassified') return "Please select a user type";
+    if (formData.userType === 'mentor' && !formData.mentorCategory) return "Please select your primary category";
     if (!formData.agreeToTerms) return "You must agree to the terms and conditions";
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -185,6 +200,7 @@ export default function SignupPage() {
           interests: formData.interests.map(i => i.name), // Send interest names
           bio: formData.bio,
           subscribeNewsletter: formData.subscribeNewsletter,
+          mentorCategory: formData.userType === 'mentor' ? formData.mentorCategory : undefined,
         }),
       });
 
@@ -219,8 +235,10 @@ export default function SignupPage() {
       });
 
       // Redirect based on user type
-      if (formData.userType === 'admin') {
-        router.push('/admin');
+      if (formData.userType === 'student') {
+        router.push('/my-saleeka');
+      } else if (formData.userType === 'mentor') {
+        router.push('/my-saleeka');
       } else {
         router.push('/my-saleeka');
       }
@@ -254,14 +272,14 @@ export default function SignupPage() {
         {/* Left side - Branding and AI Image */}
         <div className="hidden md:block space-y-6">
           <div className="text-center">
-            <Image
-              src="/saleeka-logo.png"
+            {/* <Image
+              src="/logo.png"
               alt="Saleeka Foundation Logo"
-              width={200}
-              height={67}
+              width={300}
+              height={27}
               className="object-contain mx-auto mb-6"
               priority
-            />
+            /> */}
             <h1 className="font-headline text-3xl font-bold text-primary mb-2">
               Join Saleeka Foundation
             </h1>
@@ -272,7 +290,7 @@ export default function SignupPage() {
           
           <div className="rounded-lg overflow-hidden shadow-xl">
             <AiImage
-              prompt="diverse group of young professionals and students collaborating, representing community growth and empowerment"
+              prompt="diverse group of young mentors and students collaborating, representing community growth and empowerment"
               alt="Saleeka Community"
               width={500}
               height={400}
@@ -298,7 +316,7 @@ export default function SignupPage() {
           <CardHeader className="text-center md:text-left">
             <div className="md:hidden mb-4">
               <Image
-                src="/saleeka-logo.png"
+                src="/logo.png"
                 alt="Saleeka Foundation Logo"
                 width={150}
                 height={50}
@@ -311,7 +329,7 @@ export default function SignupPage() {
               Create Your Account
             </CardTitle>
             <CardDescription>
-              Join our community of students, professionals, and organizations
+              Join our community of students, mentors, and organizations
             </CardDescription>
           </CardHeader>
           
@@ -415,7 +433,7 @@ export default function SignupPage() {
 
               {/* User Type */}
               <div className="space-y-2">
-                <Label htmlFor="userType">I am a... *</Label>
+                <Label htmlFor="userType">I am a *</Label>
                 <Select
                   value={formData.userType}
                   onValueChange={(value: UserType) => handleInputChange('userType', value)}
@@ -426,12 +444,35 @@ export default function SignupPage() {
                   </SelectTrigger>
                   <SelectContent position="popper" side="bottom" align="start">
                     <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="professional">Professional/Mentor</SelectItem>
+                    <SelectItem value="mentor">Mentor</SelectItem>
                     <SelectItem value="orgadmin">Organization Representative</SelectItem>
                     <SelectItem value="donor">Donor/Supporter</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Mentor Category - Only show for mentors */}
+              {formData.userType === 'mentor' && (
+                <div className="space-y-2">
+                  <Label htmlFor="mentorCategory">Primary Category *</Label>
+                  <Select
+                    value={formData.mentorCategory || ''}
+                    onValueChange={(value: string) => handleInputChange('mentorCategory', value)}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your primary category" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" side="bottom" align="start">
+                      {mentorCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Interests */}
               <div className="space-y-3">

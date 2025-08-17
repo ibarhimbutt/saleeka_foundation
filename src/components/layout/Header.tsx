@@ -29,7 +29,7 @@ const Header = () => {
         <div className="container flex h-20 items-center justify-between">
            <Link href="/" className="flex items-center">
             <Image
-              src="/saleeka-logo.png" // Using static logo
+              src="/logo.png" // Using static logo
               alt="Saleeka Foundation Logo"
               width={120} // Adjust as needed
               height={40} // Adjust as needed
@@ -77,6 +77,30 @@ const Header = () => {
       </Link>
     );
   };
+
+  // Filter navigation links based on authentication and user role
+  const getFilteredNavLinks = () => {
+    if (!user || !userProfile) {
+      // Show all links for non-authenticated users
+      return baseNavLinks;
+    }
+
+    // For authenticated users, filter out signup and get-involved
+    const filteredLinks = baseNavLinks.filter(link => 
+      link.href !== '/signup' && link.href !== '/get-involved'
+    );
+
+    // Add Projects link for students
+    if (userProfile.type === 'student') {
+      filteredLinks.push({
+        href: '/projects',
+        label: 'Projects',
+        icon: undefined // You can add an icon if needed
+      });
+    }
+
+    return filteredLinks;
+  };
   
   const AuthDependentLinks = ({ isMobile }: { isMobile: boolean }) => {
     if (loading) {
@@ -122,7 +146,7 @@ const Header = () => {
 
   const NavItems = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      {baseNavLinks.map((link) => renderLink(link, mobile))}
+      {getFilteredNavLinks().map((link) => renderLink(link, mobile))}
       <AuthDependentLinks isMobile={mobile} />
     </>
   );
@@ -161,7 +185,7 @@ const Header = () => {
                 <div className="flex justify-between items-center">
                     <Link href="/" className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
                         <Image
-                          src="/saleeka-logo.png" // Using static logo
+                          src="/logo.png" // Using static logo
                           alt="Saleeka Foundation Logo"
                           width={120} // Adjust as needed
                           height={40} // Adjust as needed

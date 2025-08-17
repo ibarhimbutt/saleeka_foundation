@@ -1,20 +1,43 @@
 
+"use client";
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Presentation, Heart, Building2 } from 'lucide-react'; // Updated Building to Presentation, Briefcase to Building2
+import { Users, Presentation, Heart, Building2 } from 'lucide-react';
 import SectionTitle from '@/components/shared/SectionTitle';
 import AiImage from '@/components/shared/AiImage';
+import StudentHomepage from '@/components/home/StudentHomepage';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 const pillars = [
   { name: 'Students', icon: Users, color: 'text-blue-500', description: 'Connect with mentors, find projects, and access resources to kickstart your career.' },
-  { name: 'Professionals', icon: Presentation, color: 'text-green-500', description: 'Share your expertise, mentor aspiring talents, and give back to the community.' },
+  { name: 'Mentors', icon: Presentation, color: 'text-green-500', description: 'Share your expertise, mentor aspiring talents, and give back to the community.' },
   { name: 'Organizations', icon: Building2, color: 'text-purple-500', description: 'Post projects, find skilled students for internships, and collaborate on impactful initiatives.' },
   { name: 'Donors', icon: Heart, color: 'text-red-500', description: 'Support our mission to empower individuals and build a stronger future for all.' },
 ];
 
 export default function Home() {
+  const { user, userProfile, loading } = useAuth();
+
+  // Show loading spinner while auth state is being determined
+  if (loading) {
+    return (
+      <div className="container py-12">
+        <LoadingSpinner size="lg" text="Loading..." />
+      </div>
+    );
+  }
+
+  // If user is logged in and is a student, show student homepage
+  if (user && userProfile && userProfile.type === 'student') {
+    return <StudentHomepage />;
+  }
+
+  // Otherwise show the default homepage for non-authenticated users and non-students
   return (
     <div className="space-y-16 md:space-y-24">
       {/* Hero Section */}
@@ -27,14 +50,14 @@ export default function Home() {
             The SALEEKA Way.
           </p>
           <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-10">
-            Saleeka Foundation connects Students, Professionals, Organizations, and Donors to create a thriving ecosystem of learning, growth, and opportunity.
+            Saleeka Foundation connects Students, Mentors, Organizations, and Donors to create a thriving ecosystem of learning, growth, and opportunity.
           </p>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
             <Button asChild size="lg" className="font-semibold">
               <Link href="/get-involved?tab=students">Join as Student</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="font-semibold border-primary text-primary hover:bg-primary/10">
-              <Link href="/get-involved?tab=professionals">Mentor a Student</Link>
+              <Link href="/get-involved?tab=mentors">Mentor a Student</Link>
             </Button>
           </div>
         </div>
@@ -50,7 +73,7 @@ export default function Home() {
           <div>
             <h3 className="font-headline text-2xl font-semibold mb-4">Our Core Mission</h3>
             <p className="text-muted-foreground mb-4">
-              At Saleeka, we believe in the power of collaboration. We provide a platform where students can gain practical experience, professionals can share their wisdom, organizations can find fresh talent, and donors can make a tangible impact.
+              At Saleeka, we believe in the power of collaboration. We provide a platform where students can gain practical experience, mentors can share their wisdom, organizations can find fresh talent, and donors can make a tangible impact.
             </p>
             <p className="text-muted-foreground">
               Join us in building a brighter future, one connection at a time.

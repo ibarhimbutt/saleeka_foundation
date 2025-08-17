@@ -51,7 +51,7 @@ export default function MySaleekaPage() {
 
   const greetingName = userProfile.displayName || userProfile.firstName || user.email;
   const userTypeDisplay = userProfile.type ? userProfile.type.charAt(0).toUpperCase() + userProfile.type.slice(1) : 'User';
-
+console.log('userProfile.typeuserProfile.type',userProfile)
   return (
     <div className="container mx-auto py-8 space-y-8">
       <header className="mb-8">
@@ -143,7 +143,7 @@ export default function MySaleekaPage() {
           </Card>
         )}
 
-        {userProfile.type === 'professional' && (
+        {userProfile.type === 'mentor' && (
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Mentorships</CardTitle>

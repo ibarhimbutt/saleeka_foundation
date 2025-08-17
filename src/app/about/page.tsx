@@ -36,7 +36,7 @@ export default function AboutPage() {
             <ul className="space-y-3 text-muted-foreground">
               <li className="flex items-start">
                 <CheckCircle className="w-5 h-5 text-accent mr-2 mt-1 shrink-0" />
-                <span>To connect students with experienced professionals for mentorship and guidance.</span>
+                <span>To connect students with experienced mentors for mentorship and guidance.</span>
               </li>
               <li className="flex items-start">
                 <CheckCircle className="w-5 h-5 text-accent mr-2 mt-1 shrink-0" />

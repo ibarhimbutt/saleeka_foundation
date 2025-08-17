@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Save, User, Settings, Shield, Bell } from 'lucide-react';
+import { Save, User, Settings, Shield, Bell, Trash2 } from 'lucide-react';
 import type { UserProfile, UserSettings } from '@/lib/firestoreTypes';
 import { apiService } from '@/lib/api';
 import { useUserProfile, useUserSettings, useUserInterests, useUserActivity } from '@/hooks/use-api';
@@ -23,7 +23,7 @@ interface Interest {
 }
 
 export default function ProfileSettings() {
-  const { user, userProfile, loading } = useAuth();
+  const { user, userProfile, loading, deleteUser } = useAuth();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   
@@ -60,7 +60,7 @@ export default function ProfileSettings() {
         twitterUrl: userProfile.twitterUrl || '',
         company: userProfile.company || '',
         jobTitle: userProfile.jobTitle || '',
-        skills: userProfile.skills || [],
+
         profileVisibility: userProfile.profileVisibility || 'public',
         showEmail: userProfile.showEmail || false,
         showPhone: userProfile.showPhone || false,
@@ -175,11 +175,11 @@ export default function ProfileSettings() {
     }
   };
 
-  const handleInputChange = (field: keyof UserProfile, value: any) => {
+  const handleInputChange = (field: keyof UserProfile, value: string | boolean | string[]) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSettingsChange = (field: keyof UserSettings, value: any) => {
+  const handleSettingsChange = (field: keyof UserSettings, value: string | boolean) => {
     setSettingsData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -188,15 +188,36 @@ export default function ProfileSettings() {
     handleSettingsChange('theme', newTheme);
   };
 
-  const handleSkillsChange = (value: string) => {
-    const skills = value.split(',').map(item => item.trim()).filter(Boolean);
-    handleInputChange('skills', skills);
+  const handleDeleteAccount = async () => {
+    if (!user?.uid) return;
+
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      'Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteUser();
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
     return <LoadingSpinner size="lg" text="Loading profile..." />;
   }
-
+  
   return (
     <div className="space-y-6">
       <div>
@@ -311,15 +332,7 @@ export default function ProfileSettings() {
                 />
               </div>
 
-              <InputField
-                label="Skills"
-                id="skills"
-                type="text"
-                value={profileData.skills?.join(', ') || ''}
-                onChange={handleSkillsChange}
-                placeholder="e.g., JavaScript, React, Python (comma-separated)"
-                description="Separate multiple skills with commas"
-              />
+
 
               <Button onClick={handleProfileUpdate} disabled={isUpdating}>
                 {isUpdating ? <LoadingSpinner size="sm" /> : <Save className="mr-2 h-4 w-4" />}
@@ -411,13 +424,38 @@ export default function ProfileSettings() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>
+                Irreversible and destructive actions. Please be careful.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Once you delete your account, there is no going back. Please be certain.
+                </p>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDeleteAccount}
+                  disabled={isUpdating}
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Account
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="privacy" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Privacy Settings</CardTitle>
-              <CardDescription>Control who can see your information and how it's displayed.</CardDescription>
+              <CardDescription>Control who can see your information and how it&apos;s displayed.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <SelectField

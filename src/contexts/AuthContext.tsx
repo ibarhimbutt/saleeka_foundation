@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
+import { onAuthStateChanged, signOut as firebaseSignOut, deleteUser as firebaseDeleteUser, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import type { UserProfile, UserRole, UserType } from '@/lib/firestoreTypes';
@@ -21,34 +21,14 @@ const convertFirebaseUserToAuthUser = (firebaseUser: User): any => {
 // Utility function to convert Neo4j node to UserProfile
 const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
   // Map Neo4j role to UserProfile role
-  const mapRole = (neo4jRole: string): any => {
+  const mapRole = (neo4jRole: string): UserType => {
     switch (neo4jRole) {
-      case 'superAdmin':
-      case 'editor':
-      case 'viewer':
-        return neo4jRole;
-      case 'admin':
-        return 'superAdmin';
-      case 'student':
-      case 'mentor':
-      case 'professional':
-      case 'donor':
-        return 'viewer';
-      default:
-        return 'viewer';
-    }
-  };
-
-  // Map Neo4j type to UserProfile type
-  const mapType = (neo4jType: string): any => {
-    switch (neo4jType) {
       case 'admin':
         return 'admin';
       case 'student':
         return 'student';
       case 'mentor':
-      case 'professional':
-        return 'professional';
+        return 'mentor';
       case 'donor':
         return 'donor';
       case 'orgadmin':
@@ -58,7 +38,26 @@ const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
     }
   };
 
-  return {
+  // Map Neo4j type to UserProfile type
+  const mapType = (neo4jType: string): UserType => {
+    switch (neo4jType) {
+      case 'admin':
+        return 'admin';
+      case 'student':
+        return 'student';
+      case 'mentor':
+        return 'mentor';
+      case 'donor':
+        return 'donor';
+      case 'orgadmin':
+        return 'orgadmin';
+      default:
+        return 'unclassified';
+    }
+  };
+
+  // Handle both old single-table structure and new dual-table structure
+  const baseProfile = {
     uid: neo4jNode.uid,
     email: neo4jNode.email,
     displayName: neo4jNode.displayName,
@@ -77,7 +76,6 @@ const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
     twitterUrl: neo4jNode.twitterUrl,
     company: neo4jNode.company,
     jobTitle: neo4jNode.jobTitle,
-    skills: neo4jNode.skills,
     experience: neo4jNode.experience,
     education: neo4jNode.education,
     subscribeNewsletter: neo4jNode.subscribeNewsletter,
@@ -93,7 +91,38 @@ const convertNeo4jNodeToUserProfile = (neo4jNode: any): UserProfile => {
     showEmail: neo4jNode.showEmail,
     showPhone: neo4jNode.showPhone,
     showLocation: neo4jNode.showLocation,
+    mentorCategory: neo4jNode.category, // Map category to mentorCategory for mentors
   };
+
+  // Add mentor-specific properties if they exist (for backward compatibility with old data)
+  if (neo4jNode.expertise || neo4jNode.category || neo4jNode.rating !== undefined) {
+    return {
+      ...baseProfile,
+      // Ensure the type and role are correctly set to mentor if mentor properties exist
+      type: 'mentor' as UserType,
+      role: 'mentor' as UserType,
+      // Add mentor-specific properties
+      mentorCategory: neo4jNode.category,
+      expertise: Array.isArray(neo4jNode.expertise) ? neo4jNode.expertise :
+        (typeof neo4jNode.expertise === 'string' ?
+          (() => { try { return JSON.parse(neo4jNode.expertise); } catch { return []; } })() : []),
+      rating: neo4jNode.rating,
+      yearsOfExperience: neo4jNode.yearsOfExperience,
+      maxMentees: neo4jNode.maxMentees,
+      currentMentees: neo4jNode.currentMentees,
+      totalMentees: neo4jNode.totalMentees,
+            specialties: Array.isArray(neo4jNode.specialties) ? neo4jNode.specialties : 
+                  (typeof neo4jNode.specialties === 'string' ? 
+                    (() => { try { return JSON.parse(neo4jNode.specialties); } catch { return []; } })() : []),
+      certifications: Array.isArray(neo4jNode.certifications) ? neo4jNode.certifications : 
+                     (typeof neo4jNode.certifications === 'string' ? 
+                       (() => { try { return JSON.parse(neo4jNode.certifications); } catch { return []; } })() : []),
+      availability: neo4jNode.availability,
+      industry: neo4jNode.industry,
+    };
+  }
+
+  return baseProfile;
 };
 
 interface AuthContextType {
@@ -101,6 +130,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   logout: () => Promise<void>;
+  deleteUser: () => Promise<void>;
   setUser: (user: any | null) => void;
   setUserProfile: (profile: UserProfile | null) => void;
 }
@@ -129,11 +159,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // User is signed in
           const authUser = convertFirebaseUserToAuthUser(firebaseUser);
           setUser(authUser);
-          
+
           // Fetch user profile from Neo4j
           try {
             const response = await fetch(`/api/auth/profile?uid=${encodeURIComponent(firebaseUser.uid)}`);
-            
+
             if (response.ok) {
               const data = await response.json();
               if (data.success && data.user) {
@@ -145,11 +175,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   uid: firebaseUser.uid,
                   email: firebaseUser.email || '',
                   displayName: firebaseUser.displayName || '',
-                  role: 'viewer' as UserRole,
+                  role: 'student' as UserType,
                   type: 'student' as UserType,
                   createdAt: new Date() as any,
+                  updatedAt: new Date() as any,
                   isActive: true,
                   isVerified: firebaseUser.emailVerified,
+                  subscribeNewsletter: false,
+                  emailNotifications: true,
+                  pushNotifications: false,
+                  marketingEmails: false,
+                  profileVisibility: 'public',
+                  showEmail: false,
+                  showPhone: false,
+                  showLocation: true,
                 };
                 setUserProfile(basicProfile);
               }
@@ -159,11 +198,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 uid: firebaseUser.uid,
                 email: firebaseUser.email || '',
                 displayName: firebaseUser.displayName || '',
-                role: 'viewer' as UserRole,
+                role: 'student' as UserType,
                 type: 'student' as UserType,
                 createdAt: new Date() as any,
+                updatedAt: new Date() as any,
                 isActive: true,
                 isVerified: firebaseUser.emailVerified,
+                subscribeNewsletter: false,
+                emailNotifications: true,
+                pushNotifications: false,
+                marketingEmails: false,
+                profileVisibility: 'public',
+                showEmail: false,
+                showPhone: false,
+                showLocation: true,
               };
               setUserProfile(basicProfile);
             }
@@ -174,11 +222,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
               displayName: firebaseUser.displayName || '',
-              role: 'viewer' as UserRole,
+              role: 'student' as UserType,
               type: 'student' as UserType,
               createdAt: new Date() as any,
+              updatedAt: new Date() as any,
               isActive: true,
               isVerified: firebaseUser.emailVerified,
+              subscribeNewsletter: false,
+              emailNotifications: true,
+              pushNotifications: false,
+              marketingEmails: false,
+              profileVisibility: 'public',
+              showEmail: false,
+              showPhone: false,
+              showLocation: true,
             };
             setUserProfile(basicProfile);
           }
@@ -217,6 +274,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const deleteUser = async () => {
+    setLoading(true);
+    try {
+      if (!auth || !auth.currentUser) {
+        throw new Error('No authenticated user to delete');
+      }
+
+      // Store the UID before deleting the Firebase user
+      const uid = auth.currentUser.uid;
+
+      // Delete user data from backend first
+      const response = await fetch('/api/user/delete-account', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uid }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete user data from backend');
+      }
+
+      // Delete the Firebase user after backend deletion
+      await firebaseDeleteUser(auth.currentUser);
+
+      // Clear local state
+      setUser(null);
+      setUserProfile(null);
+
+      // Redirect to home page
+      router.push('/');
+    } catch (error) {
+      console.error("Error deleting user account: ", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const setUserValue = (user: any | null) => {
     console.log('AuthContext setUser called with:', user);
     setUser(user);
@@ -227,7 +324,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserProfile(profile);
   };
 
-  const value = { user, userProfile, loading, logout, setUser: setUserValue, setUserProfile: setUserProfileValue };
+  const value = { user, userProfile, loading, logout, deleteUser, setUser: setUserValue, setUserProfile: setUserProfileValue };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

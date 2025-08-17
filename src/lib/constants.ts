@@ -179,8 +179,8 @@ export const involvementTypes: InvolvementType[] = [
     icon: Users,
   },
   {
-    id: 'professionals',
-    title: 'For Professionals',
+    id: 'mentors',
+    title: 'For Mentors',
     description: 'Become a mentor, share your expertise, post advice, and help shape the next generation of leaders.',
     ctaText: 'Become a Mentor',
     icon: Briefcase,
@@ -219,20 +219,21 @@ export const sampleStudentProfiles: StudentProfile[] = [
   { id: 'stud4', name: 'Diana Prince', email: 'diana.prince@example.com', joinDate: '2023-04-05', interests: ['Cybersecurity', 'Network Admin'], resumeUrl: '#' },
 ];
 
-export type ProfessionalProfile = {
+export type MentorProfile = {
   id: string;
   name: string;
   email: string;
   expertise: string[];
+  category: string;
   linkedinUrl?: string;
   bio: string;
 };
 
-export const sampleProfessionalProfiles: ProfessionalProfile[] = [
-  { id: 'prof1', name: 'Dr. David Lee', email: 'david.lee@example.com', expertise: ['Software Engineering', 'Cloud Computing'], linkedinUrl: '#', bio: 'Experienced software architect with 15+ years in the industry.' },
-  { id: 'prof2', name: 'Maria Rodriguez', email: 'maria.rodriguez@example.com', expertise: ['Marketing Strategy', 'Brand Management'], bio: 'Dynamic marketing leader passionate about building brands.' },
-  { id: 'prof3', name: 'Samuel Green', email: 'samuel.green@example.com', expertise: ['Product Management', 'Agile Methodologies'], linkedinUrl: '#', bio: 'Product visionary with a track record of successful launches.' },
-  { id: 'prof4', name: 'Dr. Evelyn Reed', email: 'evelyn.reed@example.com', expertise: ['Biotechnology', 'Research'], bio: 'Leading researcher in genetic engineering.' },
+export const sampleMentorProfiles: MentorProfile[] = [
+  { id: 'mentor1', name: 'Dr. David Lee', email: 'david.lee@example.com', expertise: ['Software Engineering', 'Cloud Computing'], category: 'Software Engineering', linkedinUrl: '#', bio: 'Experienced software architect with 15+ years in the industry.' },
+  { id: 'mentor2', name: 'Maria Rodriguez', email: 'maria.rodriguez@example.com', expertise: ['Marketing Strategy', 'Brand Management'], category: 'Marketing', bio: 'Dynamic marketing leader passionate about building brands.' },
+  { id: 'mentor3', name: 'Samuel Green', email: 'samuel.green@example.com', expertise: ['Product Management', 'Agile Methodologies'], category: 'Product Management', linkedinUrl: '#', bio: 'Product visionary with a track record of successful launches.' },
+  { id: 'mentor4', name: 'Dr. Evelyn Reed', email: 'evelyn.reed@example.com', expertise: ['Biotechnology', 'Research'], category: 'Healthcare', bio: 'Leading researcher in genetic engineering.' },
 ];
 
 export type OrganizationProfile = {
@@ -273,7 +274,7 @@ export const sampleDonorProfiles: DonorProfile[] = [
 export const adminNavLinks: NavLink[] = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/students', label: 'Students', icon: Users2 },
-  { href: '/admin/professionals', label: 'Professionals', icon: Briefcase },
+  { href: '/admin/mentors', label: 'Mentors', icon: Briefcase },
   { href: '/admin/organizations', label: 'Organizations', icon: Building2 },
   { href: '/admin/donors', label: 'Donors', icon: Heart },
   { href: '/admin/pregenerated-images', label: 'Manage Images', icon: ImageIcon },

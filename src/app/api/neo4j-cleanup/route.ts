@@ -6,8 +6,8 @@ export async function POST(request: NextRequest) {
     // 1. Consolidate duplicate node labels (STUDENT -> User, Student -> User, etc.)
     const consolidateLabelsQuery = `
       MATCH (n)
-      WHERE n:STUDENT OR n:Student OR n:MENTOR OR n:Mentor OR n:Professional OR n:Admin OR n:Donor
-      REMOVE n:STUDENT, n:Student, n:MENTOR, n:Mentor, n:Professional, n:Admin, n:Donor
+      WHERE n:STUDENT OR n:Student OR n:MENTOR OR n:Mentor OR n:Admin OR n:Donor
+      REMOVE n:STUDENT, n:Student, n:MENTOR, n:Mentor, n:Admin, n:Donor
       SET n:User
       RETURN count(n) as nodesUpdated
     `;

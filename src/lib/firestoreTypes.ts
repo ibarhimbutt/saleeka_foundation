@@ -29,20 +29,17 @@ export type MediaItem = {
 export type UserRole = 'superAdmin' | 'editor' | 'viewer' | 'none';
 
 // User Types for broader platform classification
-export type UserType = 'admin' | 'student' | 'professional' | 'donor' | 'orgadmin' | 'unclassified';
+export type UserType = 'admin' | 'student' | 'mentor' | 'donor' | 'orgadmin' | 'unclassified';
 
 // User Profile stored in Firestore 'users' collection
 export interface UserProfile {
   uid: string; // Firebase Auth UID, also document ID
   email: string;
-  displayName?: string;
+  displayName: string;
   firstName?: string;
   lastName?: string;
-  role: UserRole;
-  type: UserType; // New field for user classification
   photoURL?: string;
   bio?: string;
-  interests?: string[];
   phone?: string;
   location?: string;
   website?: string;
@@ -51,23 +48,36 @@ export interface UserProfile {
   twitterUrl?: string;
   company?: string;
   jobTitle?: string;
-  skills?: string[];
   experience?: string;
   education?: string;
-  subscribeNewsletter?: boolean;
-  emailNotifications?: boolean;
-  pushNotifications?: boolean;
-  marketingEmails?: boolean;
+  interests?: string[];
+  subscribeNewsletter: boolean;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  marketingEmails: boolean;
   createdAt: Timestamp;
-  updatedAt?: Timestamp;
+  updatedAt: Timestamp;
   lastLoginAt?: Timestamp;
-  isActive?: boolean;
-  isVerified?: boolean;
-  // Privacy settings
-  profileVisibility?: 'public' | 'private' | 'members-only';
-  showEmail?: boolean;
-  showPhone?: boolean;
-  showLocation?: boolean;
+  isActive: boolean;
+  isVerified: boolean;
+  profileVisibility: 'public' | 'private' | 'connections';
+  showEmail: boolean;
+  showPhone: boolean;
+  showLocation: boolean;
+  type: UserType;
+  role: UserType;
+  mentorCategory?: string; // Added for mentor profiles
+  // Additional mentor-specific properties
+  expertise?: string[];
+  rating?: number;
+  yearsOfExperience?: number;
+  maxMentees?: number;
+  currentMentees?: number;
+  totalMentees?: number;
+  specialties?: string[];
+  certifications?: string[];
+  availability?: string;
+  industry?: string;
 }
 
 // User Settings for preferences

@@ -5,25 +5,27 @@ import {
   getSession 
 } from './neo4j';
 import {
+  StudentNode, 
+  MentorNode, 
+  AdminNode, 
+  DonorNode,
+  OrganizationNode,
+  ProgramNode,
+  ProjectNode,
+  SkillNode,
+  InterestNode,
+  ActivityNode,
+  SettingsNode,
+  MediaNode,
+  MentorshipRelationship,
+  SkillRelationship,
+  ProgramEnrollmentRelationship,
+  UserWithRelationships,
+  MentorshipMatch,
+  Neo4jResult,
+  Neo4jRecord,
   NODE_LABELS,
-  RELATIONSHIP_TYPES,
-  type StudentNode,
-  type MentorNode,
-  type ProfessionalNode,
-  type AdminNode,
-  type DonorNode,
-  type OrganizationNode,
-  type ProgramNode,
-  type SkillNode,
-  type InterestNode,
-  type ActivityNode,
-  type SettingsNode,
-  type MediaNode,
-  type UserWithRelationships,
-  type MentorshipMatch,
-  type MentorshipRelationship,
-  type SkillRelationship,
-  type ProgramEnrollmentRelationship
+  RELATIONSHIP_TYPES
 } from './neo4jTypes';
 
 // ============================================================================
@@ -32,31 +34,13 @@ import {
 
 export class Neo4jUserService {
   // Create a new user node
-  static async createUser(userData: Partial<StudentNode | MentorNode | ProfessionalNode | AdminNode | DonorNode>): Promise<void> {
+  static async createUser(userData: Partial<StudentNode | MentorNode | AdminNode | DonorNode>): Promise<void> {
     const now = new Date().toISOString();
     const userType = userData.type || 'student';
     
-    // Map user type to proper Neo4j node label
-    const getNodeLabel = (type: string) => {
-      switch (type.toLowerCase()) {
-        case 'student':
-          return 'User'; // Use single 'User' label for all users
-        case 'mentor':
-        case 'professional':
-          return 'User'; // Use single 'User' label for all users
-        case 'admin':
-          return 'User'; // Use single 'User' label for all users
-        case 'donor':
-          return 'User'; // Use single 'User' label for all users
-        default:
-          return 'User'; // Use single 'User' label for all users
-      }
-    };
-    
-    const label = getNodeLabel(userType);
-    
-    const query = `
-      CREATE (u:${label}:User {
+    // Create base User node first
+    const baseUserQuery = `
+      CREATE (u:User {
         uid: $uid,
         email: $email,
         password: $password,
@@ -91,7 +75,7 @@ export class Neo4jUserService {
       })
     `;
 
-    const params = {
+    const baseUserParams = {
       uid: userData.uid || '',
       email: userData.email || '',
       password: userData.password || null,
@@ -125,36 +109,156 @@ export class Neo4jUserService {
       role: userData.role || userType
     };
 
-    // Ensure all parameters are primitive values for Neo4j compatibility
-    const sanitizedParams = Object.fromEntries(
-      Object.entries(params).map(([key, value]) => [
-        key, 
-        value === null ? null : 
-        value === undefined ? null : 
-        typeof value === 'object' ? JSON.stringify(value) : 
-        value
-      ])
-    );
+    // Execute the base user creation
+    console.log('Creating base User node with params:', baseUserParams);
+    await executeWrite(baseUserQuery, baseUserParams);
 
-    console.log('Executing Neo4j query with params:', sanitizedParams);
-    await executeWrite(query, sanitizedParams);
+    // Create role-specific node and establish relationship
+    if (userType === 'mentor') {
+      const mentorData = userData as Partial<MentorNode>;
+      const mentorQuery = `
+        MATCH (u:User {uid: $uid})
+        CREATE (m:Mentor {
+          uid: $uid,
+          expertise: $expertise,
+          category: $category,
+          yearsOfExperience: $yearsOfExperience,
+          industry: $industry,
+          certifications: $certifications,
+          availability: $availability,
+          maxMentees: $maxMentees,
+          currentMentees: $currentMentees,
+          rating: $rating,
+          totalMentees: $totalMentees,
+          specialties: $specialties,
+          createdAt: $createdAt,
+          updatedAt: $updatedAt
+        })
+        CREATE (u)-[:HAS_PROFILE]->(m)
+      `;
+
+      const mentorParams = {
+        uid: userData.uid,
+        expertise: mentorData.expertise || [],
+        category: mentorData.category || 'General',
+        yearsOfExperience: mentorData.yearsOfExperience || 0,
+        industry: mentorData.industry || null,
+        certifications: mentorData.certifications || [],
+        availability: mentorData.availability || null,
+        maxMentees: mentorData.maxMentees || 3,
+        currentMentees: mentorData.currentMentees || 0,
+        rating: mentorData.rating || 0,
+        totalMentees: mentorData.totalMentees || 0,
+        specialties: mentorData.specialties || [],
+        createdAt: now,
+        updatedAt: now
+      };
+
+      console.log('Creating Mentor node with params:', mentorParams);
+      await executeWrite(mentorQuery, mentorParams);
+    } else if (userType === 'student') {
+      const studentData = userData as Partial<StudentNode>;
+      const studentQuery = `
+        MATCH (u:User {uid: $uid})
+        CREATE (s:Student {
+          uid: $uid,
+          interests: $interests,
+          skills: $skills,
+          currentProgram: $currentProgram,
+          graduationYear: $graduationYear,
+          createdAt: $createdAt,
+          updatedAt: $updatedAt
+        })
+        CREATE (u)-[:HAS_PROFILE]->(s)
+      `;
+
+      const studentParams = {
+        uid: userData.uid,
+        interests: studentData.interests || [],
+        skills: studentData.skills || [],
+        currentProgram: studentData.currentProgram || null,
+        graduationYear: studentData.graduationYear || null,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      console.log('Creating Student node with params:', studentParams);
+      await executeWrite(studentQuery, studentParams);
+    } else if (userType === 'admin') {
+      const adminQuery = `
+        MATCH (u:User {uid: $uid})
+        CREATE (a:Admin {
+          uid: $uid,
+          permissions: $permissions,
+          createdAt: $createdAt,
+          updatedAt: $updatedAt
+        })
+        CREATE (u)-[:HAS_PROFILE]->(a)
+      `;
+
+      const adminParams = {
+        uid: userData.uid,
+        permissions: ['read', 'write', 'delete'],
+        createdAt: now,
+        updatedAt: now
+      };
+
+      console.log('Creating Admin node with params:', adminParams);
+      await executeWrite(adminQuery, adminParams);
+    } else if (userType === 'donor') {
+      const donorData = userData as Partial<DonorNode>;
+      const donorQuery = `
+        MATCH (u:User {uid: $uid})
+        CREATE (d:Donor {
+          uid: $uid,
+          donationHistory: $donationHistory,
+          preferredPrograms: $preferredPrograms,
+          totalDonated: $totalDonated,
+          createdAt: $createdAt,
+          updatedAt: $updatedAt
+        })
+        CREATE (u)-[:HAS_PROFILE]->(d)
+      `;
+
+      const donorParams = {
+        uid: userData.uid,
+        donationHistory: donorData.donationHistory || [],
+        preferredPrograms: donorData.preferredPrograms || [],
+        totalDonated: donorData.totalDonated || 0,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      console.log('Creating Donor node with params:', donorParams);
+      await executeWrite(donorQuery, donorParams);
+    }
   }
 
   // Get user by UID
-  static async getUserByUid(uid: string): Promise<StudentNode | MentorNode | ProfessionalNode | AdminNode | DonorNode | null> {
+  static async getUserByUid(uid: string): Promise<StudentNode | MentorNode | AdminNode | DonorNode | null> {
     const query = `
       MATCH (u:User {uid: $uid})
-      RETURN u
+      OPTIONAL MATCH (u)-[:HAS_PROFILE]->(profile)
+      RETURN u, profile
     `;
 
     const result = await executeRead(query, { uid });
     
     if (result.length > 0) {
-      const neo4jNode = (result[0] as { [key: string]: any }).u;
+      const record = result[0] as { [key: string]: any };
+      const userNode = record.u;
+      const profileNode = record.profile;
       
-      // Extract properties from Neo4j Node object
-      if (neo4jNode && neo4jNode.properties) {
-        return neo4jNode.properties;
+      if (userNode && userNode.properties) {
+        const userProperties = userNode.properties;
+        
+        // If there's a profile node, merge its properties
+        if (profileNode && profileNode.properties) {
+          const profileProperties = profileNode.properties;
+          return { ...userProperties, ...profileProperties };
+        }
+        
+        return userProperties;
       }
     }
     
@@ -162,7 +266,7 @@ export class Neo4jUserService {
   }
 
   // Get user by email
-  static async getUserByEmail(email: string): Promise<StudentNode | MentorNode | ProfessionalNode | AdminNode | DonorNode | null> {
+  static async getUserByEmail(email: string): Promise<StudentNode | MentorNode | AdminNode | DonorNode | null> {
     const query = `
       MATCH (u:User {email: $email})
       RETURN u
@@ -257,7 +361,7 @@ export class Neo4jUserService {
   }
 
   // Update user profile
-  static async updateUserProfile(uid: string, updates: Partial<StudentNode | MentorNode | ProfessionalNode | AdminNode | DonorNode>): Promise<void> {
+  static async updateUserProfile(uid: string, updates: Partial<StudentNode | MentorNode | AdminNode | DonorNode>): Promise<void> {
     const now = new Date().toISOString();
     
     // Handle name updates - combine firstName and lastName into displayName
@@ -306,7 +410,7 @@ export class Neo4jUserService {
   }
 
   // Get all users by type
-  static async getUsersByType(type: string): Promise<Array<StudentNode | MentorNode | ProfessionalNode | AdminNode | DonorNode>> {
+  static async getUsersByType(type: string): Promise<Array<StudentNode | MentorNode | AdminNode | DonorNode>> {
     const query = `
       MATCH (u:User {type: $type})
       RETURN u
@@ -320,7 +424,7 @@ export class Neo4jUserService {
   }
 
   // Search users
-  static async searchUsers(searchTerm: string, userType?: string): Promise<Array<StudentNode | MentorNode | ProfessionalNode | AdminNode | DonorNode>> {
+  static async searchUsers(searchTerm: string, userType?: string): Promise<Array<StudentNode | MentorNode | AdminNode | DonorNode>> {
     let query = `
       MATCH (u:User)
       WHERE u.displayName CONTAINS $searchTerm 
@@ -992,6 +1096,190 @@ export class Neo4jOrganizationService {
       const org = (record as { [key: string]: any }).o;
       return org && org.properties ? org.properties : org;
     });
+  }
+}
+
+// ============================================================================
+// PROJECT MANAGEMENT
+// ============================================================================
+
+export class Neo4jProjectService {
+  // Create project
+  static async createProject(projectData: Partial<ProjectNode>): Promise<string> {
+    const now = new Date().toISOString();
+    const projectId = `project_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const query = `
+      CREATE (p:Project {
+        id: $id,
+        title: $title,
+        description: $description,
+        category: $category,
+        skills: $skills,
+        location: $location,
+        duration: $duration,
+        teamSize: $teamSize,
+        status: $status,
+        postedDate: $postedDate,
+        deadline: $deadline,
+        compensation: $compensation,
+        createdAt: $createdAt,
+        updatedAt: $updatedAt
+      })
+      RETURN p.id
+    `;
+
+    const params = {
+      id: projectId,
+      ...projectData,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const result = await executeWrite(query, params);
+    if (result.length > 0 && typeof result[0] === 'object' && result[0] !== null && 'p.id' in result[0]) {
+      return (result[0] as { [key: string]: any })['p.id'];
+    }
+    throw new Error('Failed to create project');
+  }
+
+  // Get project by ID
+  static async getProjectById(projectId: string): Promise<ProjectNode | null> {
+    const query = `
+      MATCH (p:Project {id: $projectId})
+      RETURN p
+    `;
+
+    const result = await executeRead(query, { projectId });
+    if (result.length > 0) {
+      const project = (result[0] as { [key: string]: any }).p;
+      return project && project.properties ? project.properties : project;
+    }
+    return null;
+  }
+
+  // Get all projects with organization details
+  static async getAllProjects(): Promise<any[]> {
+    const query = `
+      MATCH (p:Project)
+      OPTIONAL MATCH (o:Organization)-[:POSTED]->(p)
+      RETURN p as project, o as organization
+      ORDER BY p.postedDate DESC
+    `;
+
+    const result = await executeRead(query, {});
+    return result.map((record: unknown) => {
+      const rec = record as { [key: string]: any };
+      const project = rec.project && rec.project.properties ? rec.project.properties : rec.project;
+      const organization = rec.organization && rec.organization.properties ? rec.organization.properties : rec.organization;
+      
+      return {
+        ...project,
+        organization: organization || {
+          id: 'unknown',
+          name: 'Unknown Organization',
+          industry: 'Unknown'
+        }
+      };
+    });
+  }
+
+  // Get projects by organization
+  static async getProjectsByOrganization(orgId: string): Promise<ProjectNode[]> {
+    const query = `
+      MATCH (o:Organization {id: $orgId})-[:POSTED]->(p:Project)
+      RETURN p
+      ORDER BY p.postedDate DESC
+    `;
+
+    const result = await executeRead(query, { orgId });
+    return result.map((record: unknown) => {
+      const project = (record as { [key: string]: any }).p;
+      return project && project.properties ? project.properties : project;
+    });
+  }
+}
+
+// ============================================================================
+// MENTOR MANAGEMENT
+// ============================================================================
+
+export class Neo4jMentorService {
+  // Get all mentors
+  static async getAllMentors(limit: number = 12, category?: string): Promise<any[]> {
+    let query = `
+      MATCH (u:User {type: 'mentor'})
+      OPTIONAL MATCH (u)-[:HAS_PROFILE]->(m:Mentor)
+      WHERE u.isActive = true
+    `;
+    const params: any = {};
+
+    if (category) {
+      // Strict filtering: only return mentors that have the specific category in their expertise
+      // and ensure the expertise field is not null or empty
+      query += ` AND (
+        (m.category IS NOT NULL AND $category IN m.category) OR 
+        (u.expertise IS NOT NULL AND u.expertise <> [] AND $category IN u.expertise)
+      )`;
+      params.category = category;
+    }
+
+    query += `
+      OPTIONAL MATCH (u)-[:HAS_SKILL]->(s:Skill)
+      RETURN u as user, m as mentor, collect(DISTINCT s.name) as skills
+      ORDER BY COALESCE(m.rating, u.rating, 0) DESC, COALESCE(m.yearsOfExperience, u.yearsOfExperience, 0) DESC
+      LIMIT ${limit}
+    `;
+
+    const result = await executeRead(query, params);
+    return result.map((record: unknown) => {
+      const rec = record as { [key: string]: any };
+      const user = rec.user && rec.user.properties ? rec.user.properties : rec.user;
+      const mentor = rec.mentor && rec.mentor.properties ? rec.mentor.properties : rec.mentor;
+      const skills = rec.skills || [];
+      
+      // Merge user and mentor properties, with mentor properties taking precedence
+      const mergedMentor = {
+        ...user,
+        ...mentor,
+        skills
+      };
+      
+      return mergedMentor;
+    });
+  }
+
+  // Get mentor by ID
+  static async getMentorById(mentorId: string): Promise<any | null> {
+    const query = `
+      MATCH (u:User {uid: $mentorId, type: 'mentor'})
+      OPTIONAL MATCH (u)-[:HAS_PROFILE]->(m:Mentor)
+      OPTIONAL MATCH (u)-[:HAS_SKILL]->(s:Skill)
+      OPTIONAL MATCH (u)-[:INTERESTED_IN]->(i:Interest)
+      RETURN u as user, m as mentor, 
+             collect(DISTINCT s.name) as skills,
+             collect(DISTINCT i.name) as interests
+    `;
+
+    const result = await executeRead(query, { mentorId });
+    if (result.length > 0) {
+      const rec = result[0] as { [key: string]: any };
+      const user = rec.user && rec.user.properties ? rec.user.properties : rec.user;
+      const mentor = rec.mentor && rec.mentor.properties ? rec.mentor.properties : rec.mentor;
+      const skills = rec.skills || [];
+      const interests = rec.interests || [];
+      
+      // Merge user and mentor properties, with mentor properties taking precedence
+      const mergedMentor = {
+        ...user,
+        ...mentor,
+        skills,
+        interests
+      };
+      
+      return mergedMentor;
+    }
+    return null;
   }
 }
 

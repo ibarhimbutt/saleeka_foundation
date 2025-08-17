@@ -3,7 +3,6 @@ export const NODE_LABELS = {
   USER: 'User',
   STUDENT: 'Student',
   MENTOR: 'Mentor',
-  PROFESSIONAL: 'Professional',
   ADMIN: 'Admin',
   DONOR: 'Donor',
   ORGANIZATION: 'Organization',
@@ -39,6 +38,7 @@ export const RELATIONSHIP_TYPES = {
   CREATED: 'CREATED',
   PARTICIPATES_IN: 'PARTICIPATES_IN',
   APPLIED_TO: 'APPLIED_TO',
+  POSTED: 'POSTED',
   
   // Organization relationships
   WORKS_FOR: 'WORKS_FOR',
@@ -110,6 +110,7 @@ export interface MentorNode extends BaseUserNode {
   type: 'mentor';
   role: 'mentor';
   expertise: string[];
+  category: string; // Primary category for the mentor
   yearsOfExperience: number;
   industry?: string;
   certifications?: string[];
@@ -119,20 +120,6 @@ export interface MentorNode extends BaseUserNode {
   rating?: number;
   totalMentees?: number;
   specialties?: string[];
-}
-
-// Professional Node Properties
-export interface ProfessionalNode extends BaseUserNode {
-  type: 'professional';
-  role: 'professional';
-  expertise: string[];
-  yearsOfExperience: number;
-  industry?: string;
-  certifications?: string[];
-  company?: string;
-  position?: string;
-  department?: string;
-  skills?: string[];
 }
 
 // Admin Node Properties
@@ -192,6 +179,24 @@ export interface ProgramNode {
   benefits?: string[];
   applicationDeadline?: string;
   status: 'active' | 'inactive' | 'completed' | 'upcoming';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// Project Node Properties
+export interface ProjectNode {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  skills: string[];
+  location: string;
+  duration: string;
+  teamSize: number;
+  status: 'open' | 'in-progress' | 'completed';
+  postedDate: string;
+  deadline: string;
+  compensation?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -289,7 +294,7 @@ export interface ProgramEnrollmentRelationship {
 
 // Graph Query Results
 export interface UserWithRelationships {
-  user: StudentNode | MentorNode | ProfessionalNode | AdminNode | DonorNode;
+  user: StudentNode | MentorNode | AdminNode | DonorNode;
   skills: Array<{ skill: SkillNode; relationship: SkillRelationship }>;
   interests: InterestNode[];
   mentors?: Array<{ mentor: MentorNode; relationship: MentorshipRelationship }>;
