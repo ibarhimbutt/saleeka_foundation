@@ -9,7 +9,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star, MapPin, Briefcase, Users, Calendar, ArrowRight } from 'lucide-react';
 import SectionTitle from '@/components/shared/SectionTitle';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface Mentor {
   uid: string;
@@ -31,13 +33,23 @@ interface Mentor {
 
 export default function StudentHomepage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<Set<string>>(new Set());
+  const [activeMentorships, setActiveMentorships] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchMentors();
-  }, [selectedCategory]);
+    if (user?.uid) {
+      fetchPendingRequests();
+      fetchActiveMentorships();
+    }
+  }, [selectedCategory, user?.uid]);
 
   const fetchMentors = async () => {
     try {
@@ -62,6 +74,40 @@ export default function StudentHomepage() {
     }
   };
 
+  const fetchPendingRequests = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const response = await fetch(`/api/mentorship/pending-requests?studentUid=${user.uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const mentorIds = new Set<string>(data.pendingRequests.map((req: any) => req.mentor.uid as string));
+          setPendingRequests(mentorIds);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching pending requests:', error);
+    }
+  };
+
+  const fetchActiveMentorships = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const response = await fetch(`/api/mentorship/active-mentorships?studentUid=${user.uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const mentorIds = new Set<string>(data.activeMentorships.map((mentorship: any) => mentorship.otherUser.uid as string));
+          setActiveMentorships(mentorIds);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching active mentorships:', error);
+    }
+  };
+
   const categories = [
     'Software Engineering',
     'Data Science',
@@ -82,6 +128,73 @@ export default function StudentHomepage() {
     if (ratio < 0.5) return 'text-green-600';
     if (ratio < 0.8) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  const handleConnectWithMentor = (mentor: Mentor) => {
+    setSelectedMentor(mentor);
+    setIsDialogOpen(true);
+  };
+
+  const handleConfirmConnection = async () => {
+    if (!selectedMentor || !user?.uid) {
+      toast({
+        title: "Error",
+        description: "Unable to process request. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsConnecting(true);
+    try {
+      const response = await fetch('/api/mentorship/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentUid: user.uid,
+          mentorUid: selectedMentor.uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success!",
+          description: `Connection request sent to ${selectedMentor.displayName}. They will review your request and get back to you soon.`,
+        });
+        
+        // Add mentor to pending requests
+        setPendingRequests(prev => new Set([...prev, selectedMentor.uid]));
+        
+        // Refresh active mentorships in case this was a reconnection
+        await fetchActiveMentorships();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to send connection request. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting with mentor:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnecting(false);
+      setIsDialogOpen(false);
+      setSelectedMentor(null);
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedMentor(null);
   };
 
 
@@ -317,8 +430,29 @@ export default function StudentHomepage() {
                     </div>
 
                     <div className="pt-2">
-                      <Button className="w-full" size="sm">
-                        Connect with Mentor
+                      <Button 
+                        className="w-full" 
+                        size="sm"
+                        onClick={() => handleConnectWithMentor(mentor)}
+                        disabled={
+                          Boolean(mentor.currentMentees && mentor.maxMentees && mentor.currentMentees >= mentor.maxMentees) ||
+                          pendingRequests.has(mentor.uid) ||
+                          activeMentorships.has(mentor.uid)
+                        }
+                        variant={
+                          pendingRequests.has(mentor.uid) ? "outline" 
+                          : activeMentorships.has(mentor.uid) ? "secondary"
+                          : "default"
+                        }
+                      >
+                        {mentor.currentMentees && mentor.maxMentees && mentor.currentMentees >= mentor.maxMentees 
+                          ? 'Mentor Full' 
+                          : pendingRequests.has(mentor.uid)
+                          ? 'Request Pending'
+                          : activeMentorships.has(mentor.uid)
+                          ? 'Connected'
+                          : 'Connect with Mentor'
+                        }
                       </Button>
                     </div>
                   </CardContent>
@@ -405,6 +539,18 @@ export default function StudentHomepage() {
           </Button>
         </div>
       </section>
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isDialogOpen}
+        onClose={handleCloseDialog}
+        onConfirm={handleConfirmConnection}
+        title="Connect with Mentor"
+        description={`Are you sure you want to send a connection request to ${selectedMentor?.displayName}? They will review your request and get back to you soon.`}
+        confirmText="Send Request"
+        cancelText="Cancel"
+        isLoading={isConnecting}
+      />
     </div>
   );
 }

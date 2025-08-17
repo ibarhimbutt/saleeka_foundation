@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Loader2, UserCircle, Briefcase, Settings, Users, Activity, Calendar, BookOpen } from 'lucide-react';
+import PendingRequests from '@/components/mentor/PendingRequests';
+import PendingRequestsCount from '@/components/mentor/PendingRequestsCount';
 
 // Utility function to format timestamp
 const formatTimestamp = (timestamp: any): string => {
@@ -23,6 +25,7 @@ const formatTimestamp = (timestamp: any): string => {
 export default function MySaleekaPage() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
+  const [showMentorRequests, setShowMentorRequests] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -82,8 +85,15 @@ console.log('userProfile.typeuserProfile.type',userProfile)
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Connections</p>
-                <p className="text-2xl font-bold">12</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {userProfile.type === 'mentor' ? 'Current Mentees' : 'Connections'}
+                </p>
+                <p className="text-2xl font-bold">
+                  {userProfile.type === 'mentor' 
+                    ? (userProfile.currentMentees || 0)
+                    : '12'
+                  }
+                </p>
               </div>
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -113,6 +123,22 @@ console.log('userProfile.typeuserProfile.type',userProfile)
             </div>
           </CardContent>
         </Card>
+
+        {userProfile.type === 'mentor' && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    <PendingRequestsCount mentorUid={user.uid} />
+                  </p>
+                </div>
+                <Users className="h-8 w-8 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Main Dashboard Cards */}
@@ -150,8 +176,14 @@ console.log('userProfile.typeuserProfile.type',userProfile)
               <Users className="h-5 w-5 text-accent" />
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground mb-2">Manage your mentee connections and availability.</p>
-              <Button variant="outline" size="sm" disabled>My Mentees (Soon)</Button>
+              <p className="text-xs text-muted-foreground mb-2">Manage your mentee connections and review requests.</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowMentorRequests(!showMentorRequests)}
+              >
+                {showMentorRequests ? 'Hide Requests' : 'View Requests'}
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -204,6 +236,26 @@ console.log('userProfile.typeuserProfile.type',userProfile)
           </CardContent>
         </Card>
       </div>
+
+      {/* Mentor Requests Section */}
+      {userProfile.type === 'mentor' && showMentorRequests && (
+        <section className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Pending Mentorship Requests
+              </CardTitle>
+              <CardDescription>
+                Review and respond to incoming mentorship requests from students
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PendingRequests mentorUid={user.uid} />
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Recent Activity Section */}
       <section className="mt-12">

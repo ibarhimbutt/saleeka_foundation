@@ -401,12 +401,96 @@ export class Neo4jUserService {
 
   // Delete user
   static async deleteUser(uid: string): Promise<void> {
-    const query = `
+    // First, get the user type and handle mentor-mentee relationships
+    const getUserQuery = `
       MATCH (u:User {uid: $uid})
-      DETACH DELETE u
+      RETURN u.type as userType, u.uid as uid
+    `;
+    
+    const userResult = await executeRead(getUserQuery, { uid });
+    
+    if (userResult.length === 0) {
+      console.log(`User with UID ${uid} not found`);
+      return;
+    }
+    
+    const userRecord = userResult[0] as { userType: string; uid: string };
+    const userType = userRecord.userType;
+    
+    if (userType === 'student') {
+      // If it's a student, decrease mentee count for all mentors
+      const decreaseMenteeCountQuery = `
+        MATCH (s:User {uid: $uid, type: 'student'})-[r:IS_MENTORED_BY]->(m:User {type: 'mentor'})
+        WHERE r.status IN ['pending', 'active']
+        WITH m, count(r) as activeRelationships
+        MATCH (m)-[:HAS_PROFILE]->(mp:Mentor)
+        SET mp.currentMentees = CASE 
+          WHEN mp.currentMentees IS NULL OR mp.currentMentees < $decreaseCount 
+          THEN 0 
+          ELSE mp.currentMentees - $decreaseCount 
+        END,
+        mp.updatedAt = $updatedAt
+        RETURN m.uid as mentorUid, mp.currentMentees as newCount
+      `;
+      
+      try {
+        await executeWrite(decreaseMenteeCountQuery, { 
+          uid, 
+          decreaseCount: 1, 
+          updatedAt: new Date().toISOString() 
+        });
+        console.log(`Decreased mentee count for mentors of student ${uid}`);
+      } catch (error) {
+        console.error(`Error decreasing mentee count for student ${uid}:`, error);
+      }
+    } else if (userType === 'mentor') {
+      // If it's a mentor, decrease mentor count for all students
+      const decreaseMentorCountQuery = `
+        MATCH (m:User {uid: $uid, type: 'mentor'})-[r:MENTORS]->(s:User {type: 'student'})
+        WHERE r.status IN ['pending', 'active']
+        WITH s, count(r) as activeRelationships
+        MATCH (s)-[:HAS_PROFILE]->(sp:Student)
+        SET sp.currentMentors = CASE 
+          WHEN sp.currentMentors IS NULL OR sp.currentMentors < $decreaseCount 
+          THEN 0 
+          ELSE sp.currentMentors - $decreaseCount 
+        END,
+        sp.updatedAt = $updatedAt
+        RETURN s.uid as studentUid, sp.currentMentors as newCount
+      `;
+      
+      try {
+        await executeWrite(decreaseMentorCountQuery, { 
+          uid, 
+          decreaseCount: 1, 
+          updatedAt: new Date().toISOString() 
+        });
+        console.log(`Decreased mentor count for students of mentor ${uid}`);
+      } catch (error) {
+        console.error(`Error decreasing mentor count for mentor ${uid}:`, error);
+      }
+    }
+    
+    // Now delete the user and all their relationships, including role-specific nodes
+    const deleteQuery = `
+      MATCH (u:User {uid: $uid})
+      OPTIONAL MATCH (u)-[:HAS_PROFILE]->(profile)
+      OPTIONAL MATCH (u)-[:HAS_SETTINGS]->(settings)
+      OPTIONAL MATCH (u)-[:HAS_SKILL]->(skill)
+      OPTIONAL MATCH (u)-[:INTERESTED_IN]->(interest)
+      OPTIONAL MATCH (u)-[:ENROLLED_IN]->(program)
+      OPTIONAL MATCH (u)-[:HAS_ACTIVITY]->(activity)
+      OPTIONAL MATCH (u)-[:IS_MENTORED_BY]->(mentor)
+      OPTIONAL MATCH (u)-[:MENTORS]->(student)
+      OPTIONAL MATCH (u)-[:HAS_MEDIA]->(media)
+      OPTIONAL MATCH (u)-[:GENERATED_BY]->(generatedMedia)
+      
+      // Delete all relationships and nodes
+      DETACH DELETE u, profile, settings, skill, interest, program, activity, mentor, student, media, generatedMedia
     `;
 
-    await executeWrite(query, { uid });
+    await executeWrite(deleteQuery, { uid });
+    console.log(`User ${uid}, role-specific nodes, and all relationships deleted successfully`);
   }
 
   // Get all users by type
@@ -447,6 +531,42 @@ export class Neo4jUserService {
       return neo4jNode && neo4jNode.properties ? neo4jNode.properties : neo4jNode;
     });
   }
+
+  // Update mentor's mentee count
+  static async updateMentorMenteeCount(mentorUid: string, increment: number): Promise<void> {
+    const query = `
+      MATCH (m:Mentor {uid: $mentorUid})
+      SET m.currentMentees = COALESCE(m.currentMentees, 0) + $increment,
+          m.totalMentees = COALESCE(m.totalMentees, 0) + $increment,
+          m.updatedAt = $updatedAt
+    `;
+
+    const params = {
+      mentorUid,
+      increment,
+      updatedAt: new Date().toISOString()
+    };
+
+    await executeWrite(query, params);
+  }
+
+  // Update student's mentor count
+  static async updateStudentMentorCount(studentUid: string, increment: number): Promise<void> {
+    const query = `
+      MATCH (s:Student {uid: $studentUid})
+      SET s.currentMentors = COALESCE(s.currentMentors, 0) + $increment,
+          s.totalMentors = COALESCE(s.totalMentors, 0) + $increment,
+          s.updatedAt = $updatedAt
+    `;
+
+    const params = {
+      studentUid,
+      increment,
+      updatedAt: new Date().toISOString()
+    };
+
+    await executeWrite(query, params);
+  }
 }
 
 // ============================================================================
@@ -459,8 +579,8 @@ export class Neo4jMentorshipService {
     const now = new Date().toISOString();
     
     const query = `
-      MATCH (s:Student {uid: $studentUid})
-      MATCH (m:Mentor {uid: $mentorUid})
+      MATCH (s:User {uid: $studentUid, type: 'student'})
+      MATCH (m:User {uid: $mentorUid, type: 'mentor'})
       CREATE (s)-[r:IS_MENTORED_BY {
         startDate: $startDate,
         status: $status,
@@ -497,6 +617,28 @@ export class Neo4jMentorshipService {
     };
 
     await executeWrite(query, params);
+    
+    console.log(`Mentorship relationship created with status: ${relationshipData.status || 'pending'}`);
+    console.log(`Student UID: ${studentUid}, Mentor UID: ${mentorUid}`);
+    
+    // Only update counts if the mentorship is active (not pending)
+    // For pending requests, counts will be updated when the mentor accepts
+    if (relationshipData.status === 'active') {
+      try {
+        // Update mentor's current mentee count
+        await Neo4jUserService.updateMentorMenteeCount(mentorUid, 1);
+        
+        // Update student's current mentor count
+        await Neo4jUserService.updateStudentMentorCount(studentUid, 1);
+        
+        console.log(`Active mentorship relationship created and counts updated for student ${studentUid} and mentor ${mentorUid}`);
+      } catch (error) {
+        console.error('Error updating mentor/student counts:', error);
+        // Don't throw error here as the relationship was created successfully
+      }
+    } else {
+      console.log(`Pending mentorship relationship created for student ${studentUid} and mentor ${mentorUid} - counts will be updated when accepted`);
+    }
   }
 
   // Get mentorship matches for a student
@@ -504,8 +646,8 @@ export class Neo4jMentorshipService {
     // Ensure limit is an integer
     const limitInt = Math.floor(limit);
     const query = `
-      MATCH (s:Student {uid: $studentUid})
-      MATCH (m:Mentor)
+      MATCH (s:User {uid: $studentUid, type: 'student'})
+      MATCH (m:User {type: 'mentor'})
       WHERE m.isActive = true AND m.currentMentees < m.maxMentees
       OPTIONAL MATCH (s)-[:HAS_SKILL]->(ss:Skill)
       OPTIONAL MATCH (m)-[:HAS_SKILL]->(ms:Skill)
@@ -570,19 +712,111 @@ export class Neo4jMentorshipService {
 
   // Update mentorship status
   static async updateMentorshipStatus(studentUid: string, mentorUid: string, status: string, updates?: Partial<MentorshipRelationship>): Promise<void> {
+    // First, get the current status to determine if we need to update counts
+    const getCurrentStatusQuery = `
+      MATCH (s:User {uid: $studentUid, type: 'student'})-[r:IS_MENTORED_BY]->(m:User {uid: $mentorUid, type: 'mentor'})
+      RETURN r.status as currentStatus
+    `;
+    
+    const currentStatusResult = await executeRead(getCurrentStatusQuery, { studentUid, mentorUid });
+    const currentStatusRecord = currentStatusResult.length > 0 ? currentStatusResult[0] as { currentStatus: string } : null;
+    const currentStatus = currentStatusRecord ? currentStatusRecord.currentStatus : null;
+    
     let setUpdates = '';
     if (updates && Object.keys(updates).length > 0) {
       setUpdates = Object.keys(updates)
         .map(key => `, r.${key} = $${key}, r2.${key} = $${key}`)
         .join('');
     }
+    
     const query = `
-      MATCH (s:Student {uid: $studentUid})-[r:IS_MENTORED_BY]->(m:Mentor {uid: $mentorUid})
+      MATCH (s:User {uid: $studentUid, type: 'student'})-[r:IS_MENTORED_BY]->(m:User {uid: $mentorUid, type: 'mentor'})
       MATCH (m)-[r2:MENTORS]->(s)
       SET r.status = $status, r2.status = $status${setUpdates}
     `;
 
     await executeWrite(query, { studentUid, mentorUid, status, ...(updates || {}) });
+    
+    // Update counts based on status changes
+    try {
+      if (currentStatus === 'pending' && status === 'active') {
+        // Relationship activated - increment counts since they weren't set during pending creation
+        await Neo4jUserService.updateMentorMenteeCount(mentorUid, 1);
+        await Neo4jUserService.updateStudentMentorCount(studentUid, 1);
+        console.log(`Mentorship activated for student ${studentUid} and mentor ${mentorUid} - counts incremented`);
+      } else if (currentStatus === 'active' && (status === 'completed' || status === 'terminated')) {
+        // Relationship ended - decrease counts
+        await Neo4jUserService.updateMentorMenteeCount(mentorUid, -1);
+        await Neo4jUserService.updateStudentMentorCount(studentUid, -1);
+        console.log(`Mentorship ended, counts decreased for student ${studentUid} and mentor ${mentorUid}`);
+      } else if (currentStatus === 'pending' && (status === 'completed' || status === 'terminated')) {
+        // Pending relationship rejected/terminated - decrease counts
+        await Neo4jUserService.updateMentorMenteeCount(mentorUid, -1);
+        await Neo4jUserService.updateStudentMentorCount(studentUid, -1);
+        console.log(`Pending mentorship rejected, counts decreased for student ${studentUid} and mentor ${mentorUid}`);
+      } else if (currentStatus === 'active' && status === 'rejected') {
+        // Active relationship rejected - decrease counts
+        await Neo4jUserService.updateMentorMenteeCount(mentorUid, -1);
+        await Neo4jUserService.updateStudentMentorCount(studentUid, -1);
+        console.log(`Active mentorship rejected, counts decreased for student ${studentUid} and mentor ${mentorUid}`);
+      }
+    } catch (error) {
+      console.error('Error updating counts during status change:', error);
+      // Don't throw error here as the status was updated successfully
+    }
+  }
+
+  // Get pending mentorship requests for a mentor
+  static async getPendingMentorshipRequests(mentorUid: string): Promise<any[]> {
+    console.log(`Fetching pending mentorship requests for mentor: ${mentorUid}`);
+    
+    const query = `
+      MATCH (m:User {uid: $mentorUid, type: 'mentor'})-[r:MENTORS]->(s:User {type: 'student'})
+      WHERE r.status = 'pending'
+      RETURN s as student, s as studentProfile, s as user, r as relationship
+      ORDER BY r.startDate DESC
+    `;
+
+    console.log('Query:', query);
+    console.log('Parameters:', { mentorUid });
+
+    const result = await executeRead(query, { mentorUid });
+    console.log(`Found ${result.length} pending requests for mentor ${mentorUid}`);
+    
+    if (result.length > 0) {
+      console.log('First result:', JSON.stringify(result[0], null, 2));
+    }
+
+    return result.map((record: unknown) => {
+      const rec = record as { [key: string]: any };
+      return {
+        student: rec.student && rec.student.properties ? rec.student.properties : rec.student,
+        studentProfile: rec.studentProfile && rec.studentProfile.properties ? rec.studentProfile.properties : rec.studentProfile,
+        user: rec.user && rec.user.properties ? rec.user.properties : rec.user,
+        relationship: rec.relationship && rec.relationship.properties ? rec.relationship.properties : rec.relationship
+      };
+    });
+  }
+
+  // Get pending mentorship requests for a student
+  static async getPendingMentorshipRequestsForStudent(studentUid: string): Promise<any[]> {
+    const query = `
+      MATCH (s:User {uid: $studentUid, type: 'student'})-[r:IS_MENTORED_BY]->(m:User {type: 'mentor'})
+      WHERE r.status = 'pending'
+      RETURN m as mentor, m as mentorProfile, m as user, r as relationship
+      ORDER BY r.startDate DESC
+    `;
+
+    const result = await executeRead(query, { studentUid });
+    return result.map((record: unknown) => {
+      const rec = record as { [key: string]: any };
+      return {
+        mentor: rec.mentor && rec.mentor.properties ? rec.mentor.properties : rec.mentor,
+        mentorProfile: rec.mentorProfile && rec.mentorProfile.properties ? rec.mentorProfile.properties : rec.mentorProfile,
+        user: rec.user && rec.user.properties ? rec.user.properties : rec.user,
+        relationship: rec.relationship && rec.relationship.properties ? rec.relationship.properties : rec.relationship
+      };
+    });
   }
 }
 

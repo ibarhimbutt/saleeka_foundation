@@ -162,6 +162,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           // Fetch user profile from Neo4j
           try {
+            // Add a small delay to ensure the signup API has completed
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
             const response = await fetch(`/api/auth/profile?uid=${encodeURIComponent(firebaseUser.uid)}`);
 
             if (response.ok) {
@@ -192,8 +195,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 };
                 setUserProfile(basicProfile);
               }
+            } else if (response.status === 404) {
+              // Profile not found - this might happen during signup, try again after a delay
+              console.log('Profile not found, retrying after delay...');
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              const retryResponse = await fetch(`/api/auth/profile?uid=${encodeURIComponent(firebaseUser.uid)}`);
+              if (retryResponse.ok) {
+                const retryData = await retryResponse.json();
+                if (retryData.success && retryData.user) {
+                  const convertedProfile = convertNeo4jNodeToUserProfile(retryData.user);
+                  setUserProfile(convertedProfile);
+                } else {
+                  // Create basic profile if retry also fails
+                  const basicProfile: UserProfile = {
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email || '',
+                    displayName: firebaseUser.displayName || '',
+                    role: 'student' as UserType,
+                    type: 'student' as UserType,
+                    createdAt: new Date() as any,
+                    updatedAt: new Date() as any,
+                    isActive: true,
+                    isVerified: firebaseUser.emailVerified,
+                    subscribeNewsletter: false,
+                    emailNotifications: true,
+                    pushNotifications: false,
+                    marketingEmails: false,
+                    profileVisibility: 'public',
+                    showEmail: false,
+                    showPhone: false,
+                    showLocation: true,
+                  };
+                  setUserProfile(basicProfile);
+                }
+              } else {
+                // If retry also fails, create basic profile
+                const basicProfile: UserProfile = {
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email || '',
+                  displayName: firebaseUser.displayName || '',
+                  role: 'student' as UserType,
+                  type: 'student' as UserType,
+                  createdAt: new Date() as any,
+                  updatedAt: new Date() as any,
+                  isActive: true,
+                  isVerified: firebaseUser.emailVerified,
+                  subscribeNewsletter: false,
+                  emailNotifications: true,
+                  pushNotifications: false,
+                  marketingEmails: false,
+                  profileVisibility: 'public',
+                  showEmail: false,
+                  showPhone: false,
+                  showLocation: true,
+                };
+                setUserProfile(basicProfile);
+              }
             } else {
-              // If API call fails, create a basic profile
+              // If API call fails with other error, create a basic profile
               const basicProfile: UserProfile = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email || '',
@@ -297,15 +357,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Failed to delete user data from backend');
       }
 
-      // Delete the Firebase user after backend deletion
-      await firebaseDeleteUser(auth.currentUser);
+      // Try to delete the Firebase user
+      try {
+        await firebaseDeleteUser(auth.currentUser);
+        
+        // Clear local state
+        setUser(null);
+        setUserProfile(null);
 
-      // Clear local state
-      setUser(null);
-      setUserProfile(null);
-
-      // Redirect to home page
-      router.push('/');
+        // Redirect to home page
+        router.push('/');
+      } catch (firebaseError: any) {
+        // Check if Firebase requires recent authentication
+        if (firebaseError.code === 'auth/requires-recent-login') {
+          // Throw a specific error that the UI can handle
+          throw new Error('REAUTH_REQUIRED');
+        } else {
+          // Re-throw other Firebase errors
+          throw firebaseError;
+        }
+      }
     } catch (error) {
       console.error("Error deleting user account: ", error);
       throw error;
